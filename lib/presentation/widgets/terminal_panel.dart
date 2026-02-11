@@ -9,12 +9,14 @@ class TerminalPanel extends StatefulWidget {
     required this.activeSessionId,
     required this.onSelectSession,
     required this.onDisconnectSession,
+    required this.onDeleteSession,
     required this.onSendInput,
   });
 
   final List<SessionView> sessions;
   final String? activeSessionId;
   final Future<void> Function(String sessionId) onDisconnectSession;
+  final Future<void> Function(String sessionId) onDeleteSession;
   final Future<void> Function(String sessionId, String input) onSendInput;
   final void Function(String sessionId) onSelectSession;
 
@@ -57,12 +59,13 @@ class _TerminalPanelState extends State<TerminalPanel> {
               itemBuilder: (context, index) {
                 final session = widget.sessions[index];
                 final selected = session.session.id == active.session.id;
-                return ChoiceChip(
+                return InputChip(
                   selected: selected,
                   label: Text(
                     '${session.hostProfile.name} (${statusLabel(session.session.status)})',
                   ),
                   onSelected: (_) => widget.onSelectSession(session.session.id),
+                  onDeleted: () => widget.onDeleteSession(session.session.id),
                 );
               },
             ),
@@ -113,6 +116,11 @@ class _TerminalPanelState extends State<TerminalPanel> {
               OutlinedButton(
                 onPressed: () => widget.onDisconnectSession(active.session.id),
                 child: const Text('Disconnect'),
+              ),
+              const SizedBox(width: 8),
+              OutlinedButton(
+                onPressed: () => widget.onDeleteSession(active.session.id),
+                child: const Text('Delete Session'),
               ),
             ],
           ),

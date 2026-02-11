@@ -121,6 +121,7 @@ class _HomePageState extends State<HomePage> {
                   activeSessionId: widget.orchestrator.activeSessionId,
                   onSelectSession: widget.orchestrator.setActiveSession,
                   onDisconnectSession: widget.orchestrator.disconnectSession,
+                  onDeleteSession: widget.orchestrator.removeSession,
                   onSendInput: widget.orchestrator.sendInput,
                 ),
               ),

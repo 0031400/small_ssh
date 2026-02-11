@@ -292,20 +292,7 @@ class SessionOrchestrator extends ChangeNotifier {
         .toList(growable: false);
 
     for (final sessionId in sessionIds) {
-      final managed = _sessions.remove(sessionId);
-      if (managed == null) {
-        continue;
-      }
-
-      await managed.connection?.disconnect();
-      await managed.subscription?.cancel();
-    }
-
-    if (_activeSessionId != null && !_sessions.containsKey(_activeSessionId)) {
-      _activeSessionId = _sessions.keys.cast<String?>().firstWhere(
-        (id) => id != null,
-        orElse: () => null,
-      );
+      await removeSession(sessionId);
     }
 
     notifyListeners();
@@ -326,10 +313,23 @@ class SessionOrchestrator extends ChangeNotifier {
     );
 
     if (_activeSessionId == input.sessionId) {
-      _activeSessionId = _sessions.keys.cast<String?>().firstWhere(
-        (id) => id != input.sessionId,
-        orElse: () => null,
-      );
+      _activeSessionId = _nextActiveSessionId(excluding: input.sessionId);
+    }
+
+    notifyListeners();
+  }
+
+  Future<void> removeSession(String sessionId) async {
+    final managed = _sessions.remove(sessionId);
+    if (managed == null) {
+      return;
+    }
+
+    await managed.connection?.disconnect();
+    await managed.subscription?.cancel();
+
+    if (_activeSessionId == sessionId) {
+      _activeSessionId = _nextActiveSessionId(excluding: sessionId);
     }
 
     notifyListeners();
@@ -361,6 +361,15 @@ class SessionOrchestrator extends ChangeNotifier {
       managed.connection?.disconnect();
     }
     super.dispose();
+  }
+
+  String? _nextActiveSessionId({required String excluding}) {
+    for (final id in _sessions.keys) {
+      if (id != excluding) {
+        return id;
+      }
+    }
+    return null;
   }
 }
 
