@@ -5,7 +5,7 @@ import 'package:small_ssh/application/usecases/connect_to_host.dart';
 import 'package:small_ssh/application/usecases/disconnect_session.dart';
 import 'package:small_ssh/domain/repositories/credential_repository.dart';
 import 'package:small_ssh/domain/repositories/host_profile_repository.dart';
-import 'package:small_ssh/infrastructure/persistence/in_memory_host_profile_repository.dart';
+import 'package:small_ssh/infrastructure/persistence/file_host_profile_repository.dart';
 import 'package:small_ssh/infrastructure/security/in_memory_credential_repository.dart';
 import 'package:small_ssh/infrastructure/ssh/dartssh2_gateway.dart';
 import 'package:small_ssh/presentation/pages/home_page.dart';
@@ -25,7 +25,7 @@ class _SmallSshAppState extends State<SmallSshApp> {
   @override
   void initState() {
     super.initState();
-    _hostRepository = InMemoryHostProfileRepository();
+    _hostRepository = FileHostProfileRepository();
     _credentialRepository = InMemoryCredentialRepository();
 
     _orchestrator = SessionOrchestrator(
