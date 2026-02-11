@@ -68,6 +68,32 @@ class _HomePageState extends State<HomePage> {
     await widget.orchestrator.removeHostProfile(host.id);
   }
 
+  Future<void> _openEditHostDialog(HostProfile host) async {
+    final result = await showDialog<HostFormResult>(
+      context: context,
+      builder: (context) => HostFormDialog(initialHost: host),
+    );
+
+    if (!mounted || result == null) {
+      return;
+    }
+
+    final error = await widget.orchestrator.updateHostProfile(
+      hostId: host.id,
+      name: result.name,
+      host: result.host,
+      port: result.port,
+      username: result.username,
+      password: result.password,
+    );
+
+    if (!mounted || error == null) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -84,6 +110,7 @@ class _HomePageState extends State<HomePage> {
                   hosts: widget.orchestrator.hosts,
                   onConnect: widget.orchestrator.connectToHost,
                   onAddHost: _openHostDialog,
+                  onEditHost: _openEditHostDialog,
                   onDeleteHost: _confirmDeleteHost,
                 ),
               ),
@@ -111,6 +138,7 @@ class _HostListPanel extends StatelessWidget {
     required this.hosts,
     required this.onConnect,
     required this.onAddHost,
+    required this.onEditHost,
     required this.onDeleteHost,
   });
 
@@ -118,6 +146,7 @@ class _HostListPanel extends StatelessWidget {
   final List<HostProfile> hosts;
   final Future<void> Function(String hostId) onConnect;
   final Future<void> Function() onAddHost;
+  final Future<void> Function(HostProfile host) onEditHost;
   final Future<void> Function(HostProfile host) onDeleteHost;
 
   @override
@@ -170,6 +199,12 @@ class _HostListPanel extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(width: 8),
+                            IconButton(
+                              onPressed: () => onEditHost(host),
+                              tooltip: 'Edit host',
+                              icon: const Icon(Icons.edit_outlined),
+                            ),
+                            const SizedBox(width: 4),
                             IconButton(
                               onPressed: () => onDeleteHost(host),
                               tooltip: 'Delete host',

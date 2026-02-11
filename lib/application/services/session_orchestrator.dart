@@ -226,6 +226,62 @@ class SessionOrchestrator extends ChangeNotifier {
     return null;
   }
 
+  Future<String?> updateHostProfile({
+    required String hostId,
+    required String name,
+    required String host,
+    required int port,
+    required String username,
+    String? password,
+  }) async {
+    final normalizedName = name.trim();
+    final normalizedHost = host.trim();
+    final normalizedUser = username.trim();
+
+    if (normalizedName.isEmpty ||
+        normalizedHost.isEmpty ||
+        normalizedUser.isEmpty) {
+      return 'Name, host and username are required.';
+    }
+
+    if (port <= 0 || port > 65535) {
+      return 'Port must be between 1 and 65535.';
+    }
+
+    final hostIndex = _hosts.indexWhere((item) => item.id == hostId);
+    if (hostIndex < 0) {
+      return 'Host not found.';
+    }
+
+    final updated = HostProfile(
+      id: hostId,
+      name: normalizedName,
+      host: normalizedHost,
+      port: port,
+      username: normalizedUser,
+    );
+
+    await _hostRepository.save(updated);
+    _hosts[hostIndex] = updated;
+
+    final secret = password?.trim();
+    if (secret != null && secret.isNotEmpty) {
+      await _credentialRepository.writeSecret(
+        CredentialRef(id: '$hostId-password', kind: CredentialKind.password),
+        secret,
+      );
+    }
+
+    for (final managed in _sessions.values) {
+      if (managed.hostProfile.id == hostId) {
+        managed.hostProfile = updated;
+      }
+    }
+
+    notifyListeners();
+    return null;
+  }
+
   Future<void> removeHostProfile(String hostId) async {
     await _hostRepository.deleteById(hostId);
     _hosts.removeWhere((host) => host.id == hostId);
@@ -316,7 +372,7 @@ class _ManagedSession {
     required this.output,
   });
 
-  final HostProfile hostProfile;
+  HostProfile hostProfile;
   SshSession session;
   final SshConnection? connection;
   final List<String> output;

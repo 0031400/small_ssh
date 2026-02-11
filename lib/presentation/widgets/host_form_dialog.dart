@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:small_ssh/domain/models/host_profile.dart';
 
 class HostFormResult {
   const HostFormResult({
@@ -17,7 +18,9 @@ class HostFormResult {
 }
 
 class HostFormDialog extends StatefulWidget {
-  const HostFormDialog({super.key});
+  const HostFormDialog({super.key, this.initialHost});
+
+  final HostProfile? initialHost;
 
   @override
   State<HostFormDialog> createState() => _HostFormDialogState();
@@ -25,13 +28,24 @@ class HostFormDialog extends StatefulWidget {
 
 class _HostFormDialogState extends State<HostFormDialog> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _hostController = TextEditingController();
-  final TextEditingController _portController = TextEditingController(
-    text: '22',
-  );
-  final TextEditingController _usernameController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
+  late final TextEditingController _nameController;
+  late final TextEditingController _hostController;
+  late final TextEditingController _portController;
+  late final TextEditingController _usernameController;
+  late final TextEditingController _passwordController;
+
+  bool get _isEditing => widget.initialHost != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final initial = widget.initialHost;
+    _nameController = TextEditingController(text: initial?.name ?? '');
+    _hostController = TextEditingController(text: initial?.host ?? '');
+    _portController = TextEditingController(text: '${initial?.port ?? 22}');
+    _usernameController = TextEditingController(text: initial?.username ?? '');
+    _passwordController = TextEditingController();
+  }
 
   @override
   void dispose() {
@@ -46,7 +60,7 @@ class _HostFormDialogState extends State<HostFormDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Add Host'),
+      title: Text(_isEditing ? 'Edit Host' : 'Add Host'),
       content: Form(
         key: _formKey,
         child: SizedBox(
@@ -78,7 +92,7 @@ class _HostFormDialogState extends State<HostFormDialog> {
               TextFormField(
                 controller: _passwordController,
                 decoration: const InputDecoration(
-                  labelText: 'Password (optional)',
+                  labelText: 'Password (optional, leave blank to keep)',
                 ),
                 obscureText: true,
               ),
@@ -91,7 +105,10 @@ class _HostFormDialogState extends State<HostFormDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Cancel'),
         ),
-        FilledButton(onPressed: _submit, child: const Text('Save')),
+        FilledButton(
+          onPressed: _submit,
+          child: Text(_isEditing ? 'Update' : 'Save'),
+        ),
       ],
     );
   }
