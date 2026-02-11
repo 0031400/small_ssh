@@ -1,0 +1,295 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
+import 'package:small_ssh/application/usecases/connect_to_host.dart';
+import 'package:small_ssh/application/usecases/disconnect_session.dart';
+import 'package:small_ssh/domain/models/connection_state_status.dart';
+import 'package:small_ssh/domain/models/credential_ref.dart';
+import 'package:small_ssh/domain/models/host_profile.dart';
+import 'package:small_ssh/domain/models/ssh_session.dart';
+import 'package:small_ssh/domain/repositories/credential_repository.dart';
+import 'package:small_ssh/domain/repositories/host_profile_repository.dart';
+import 'package:small_ssh/infrastructure/ssh/ssh_gateway.dart';
+
+class SessionView {
+  const SessionView({
+    required this.session,
+    required this.hostProfile,
+    required this.output,
+  });
+
+  final SshSession session;
+  final HostProfile hostProfile;
+  final List<String> output;
+}
+
+class SessionOrchestrator extends ChangeNotifier {
+  SessionOrchestrator({
+    required HostProfileRepository hostRepository,
+    required CredentialRepository credentialRepository,
+    required SshGateway sshGateway,
+    required ConnectToHostUseCase connectToHostUseCase,
+    required DisconnectSessionUseCase disconnectSessionUseCase,
+  }) : _hostRepository = hostRepository,
+       _credentialRepository = credentialRepository,
+       _sshGateway = sshGateway,
+       _connectToHostUseCase = connectToHostUseCase,
+       _disconnectSessionUseCase = disconnectSessionUseCase;
+
+  final HostProfileRepository _hostRepository;
+  final CredentialRepository _credentialRepository;
+  final SshGateway _sshGateway;
+  final ConnectToHostUseCase _connectToHostUseCase;
+  final DisconnectSessionUseCase _disconnectSessionUseCase;
+
+  final List<HostProfile> _hosts = <HostProfile>[];
+  final Map<String, _ManagedSession> _sessions = <String, _ManagedSession>{};
+
+  String? _activeSessionId;
+  bool _loadingHosts = true;
+
+  List<HostProfile> get hosts => List<HostProfile>.unmodifiable(_hosts);
+
+  List<SessionView> get sessions {
+    return _sessions.values
+        .map(
+          (managed) => SessionView(
+            session: managed.session,
+            hostProfile: managed.hostProfile,
+            output: List<String>.unmodifiable(managed.output),
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  String? get activeSessionId => _activeSessionId;
+  bool get loadingHosts => _loadingHosts;
+
+  SessionView? get activeSession {
+    final id = _activeSessionId;
+    if (id == null) {
+      return null;
+    }
+
+    final managed = _sessions[id];
+    if (managed == null) {
+      return null;
+    }
+
+    return SessionView(
+      session: managed.session,
+      hostProfile: managed.hostProfile,
+      output: List<String>.unmodifiable(managed.output),
+    );
+  }
+
+  Future<void> initialize() async {
+    _loadingHosts = true;
+    notifyListeners();
+
+    final loadedHosts = await _hostRepository.getAll();
+    _hosts
+      ..clear()
+      ..addAll(loadedHosts);
+
+    _loadingHosts = false;
+    notifyListeners();
+  }
+
+  Future<void> connectToHost(String hostId) async {
+    final input = _connectToHostUseCase.buildInput(hostId);
+    final host = await _hostRepository.findById(input.hostId);
+
+    if (host == null) {
+      return;
+    }
+
+    final pendingSession = SshSession(
+      id: 'pending-${DateTime.now().microsecondsSinceEpoch}',
+      hostProfileId: host.id,
+      status: ConnectionStateStatus.connecting,
+      createdAt: DateTime.now(),
+    );
+
+    final pendingManaged = _ManagedSession(
+      hostProfile: host,
+      session: pendingSession,
+      output: <String>['Connecting to ${host.host}:${host.port}...'],
+    );
+
+    _sessions[pendingSession.id] = pendingManaged;
+    _activeSessionId = pendingSession.id;
+    notifyListeners();
+
+    try {
+      final credential = CredentialRef(
+        id: '${host.id}-password',
+        kind: CredentialKind.password,
+      );
+      final password =
+          await _credentialRepository.readSecret(credential) ?? 'changeme';
+
+      final connection = await _sshGateway.connect(
+        SshConnectRequest(
+          host: host.host,
+          port: host.port,
+          username: host.username,
+          password: password,
+        ),
+      );
+
+      final connectedSession = SshSession(
+        id: connection.id,
+        hostProfileId: host.id,
+        status: ConnectionStateStatus.connected,
+        createdAt: pendingSession.createdAt,
+      );
+
+      final managed = _ManagedSession(
+        hostProfile: host,
+        session: connectedSession,
+        connection: connection,
+        output: List<String>.from(pendingManaged.output),
+      );
+
+      managed.subscription = connection.output.listen(
+        (line) {
+          managed.output.add(line);
+          notifyListeners();
+        },
+        onDone: () {
+          managed.session = managed.session.copyWith(
+            status: ConnectionStateStatus.disconnected,
+          );
+          notifyListeners();
+        },
+      );
+
+      _sessions
+        ..remove(pendingSession.id)
+        ..[connectedSession.id] = managed;
+
+      _activeSessionId = connectedSession.id;
+      notifyListeners();
+    } catch (error) {
+      pendingManaged.session = pendingManaged.session.copyWith(
+        status: ConnectionStateStatus.error,
+        lastError: error.toString(),
+      );
+      pendingManaged.output.add('Connection failed: $error');
+      notifyListeners();
+    }
+  }
+
+  Future<String?> addHostProfile({
+    required String name,
+    required String host,
+    required int port,
+    required String username,
+    String? password,
+  }) async {
+    final normalizedName = name.trim();
+    final normalizedHost = host.trim();
+    final normalizedUser = username.trim();
+
+    if (normalizedName.isEmpty ||
+        normalizedHost.isEmpty ||
+        normalizedUser.isEmpty) {
+      return 'Name, host and username are required.';
+    }
+
+    if (port <= 0 || port > 65535) {
+      return 'Port must be between 1 and 65535.';
+    }
+
+    final profile = HostProfile(
+      id: 'host-${DateTime.now().microsecondsSinceEpoch}',
+      name: normalizedName,
+      host: normalizedHost,
+      port: port,
+      username: normalizedUser,
+    );
+
+    await _hostRepository.save(profile);
+    final secret = password?.trim();
+    if (secret != null && secret.isNotEmpty) {
+      await _credentialRepository.writeSecret(
+        CredentialRef(
+          id: '${profile.id}-password',
+          kind: CredentialKind.password,
+        ),
+        secret,
+      );
+    }
+    _hosts.add(profile);
+    notifyListeners();
+    return null;
+  }
+
+  Future<void> disconnectSession(String sessionId) async {
+    final input = _disconnectSessionUseCase.buildInput(sessionId);
+    final managed = _sessions[input.sessionId];
+    if (managed == null) {
+      return;
+    }
+
+    await managed.connection?.disconnect();
+    await managed.subscription?.cancel();
+
+    managed.session = managed.session.copyWith(
+      status: ConnectionStateStatus.disconnected,
+    );
+
+    if (_activeSessionId == input.sessionId) {
+      _activeSessionId = _sessions.keys.cast<String?>().firstWhere(
+        (id) => id != input.sessionId,
+        orElse: () => null,
+      );
+    }
+
+    notifyListeners();
+  }
+
+  Future<void> sendInput(String sessionId, String input) async {
+    final managed = _sessions[sessionId];
+    if (managed == null || managed.connection == null) {
+      return;
+    }
+
+    managed.output.add('> $input');
+    notifyListeners();
+
+    await managed.connection!.sendInput(input);
+  }
+
+  void setActiveSession(String sessionId) {
+    if (_sessions.containsKey(sessionId)) {
+      _activeSessionId = sessionId;
+      notifyListeners();
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final managed in _sessions.values) {
+      managed.subscription?.cancel();
+      managed.connection?.disconnect();
+    }
+    super.dispose();
+  }
+}
+
+class _ManagedSession {
+  _ManagedSession({
+    required this.hostProfile,
+    required this.session,
+    this.connection,
+    required this.output,
+  });
+
+  final HostProfile hostProfile;
+  SshSession session;
+  final SshConnection? connection;
+  final List<String> output;
+  StreamSubscription<String>? subscription;
+}
