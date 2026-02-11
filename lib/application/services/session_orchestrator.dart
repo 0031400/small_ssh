@@ -341,9 +341,6 @@ class SessionOrchestrator extends ChangeNotifier {
       return;
     }
 
-    managed.output.add('> $input');
-    notifyListeners();
-
     await managed.connection!.sendInput(input);
   }
 

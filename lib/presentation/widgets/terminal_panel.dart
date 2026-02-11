@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:small_ssh/application/services/session_orchestrator.dart';
 import 'package:small_ssh/presentation/pages/home_page.dart';
+import 'package:xterm/xterm.dart';
 
 class TerminalPanel extends StatefulWidget {
   const TerminalPanel({
@@ -23,11 +24,15 @@ class TerminalPanel extends StatefulWidget {
 }
 
 class _TerminalPanelState extends State<TerminalPanel> {
-  final TextEditingController _inputController = TextEditingController();
+  final Map<String, Terminal> _terminals = <String, Terminal>{};
+  final Map<String, int> _renderedLineCount = <String, int>{};
+  final Map<String, StringBuffer> _pendingInput = <String, StringBuffer>{};
 
   @override
   void dispose() {
-    _inputController.dispose();
+    _terminals.clear();
+    _renderedLineCount.clear();
+    _pendingInput.clear();
     super.dispose();
   }
 
@@ -43,6 +48,8 @@ class _TerminalPanelState extends State<TerminalPanel> {
       (session) => session.session.id == widget.activeSessionId,
       orElse: () => widget.sessions.first,
     );
+    _syncTerminals(widget.sessions);
+    final terminal = _terminals[active.session.id]!;
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -72,23 +79,43 @@ class _TerminalPanelState extends State<TerminalPanel> {
           Expanded(
             child: Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: const Color(0xFF0B1220),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: ListView.builder(
-                itemCount: active.output.length,
-                itemBuilder: (context, index) {
-                  return Text(
-                    active.output[index],
-                    style: const TextStyle(
-                      color: Color(0xFFE2E8F0),
-                      fontFamily: 'Consolas',
-                      fontSize: 13,
-                    ),
-                  );
-                },
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: TerminalView(
+                  hardwareKeyboardOnly:true,
+                  terminal,
+                  theme: const TerminalTheme(
+                    cursor: Color(0xFFE2E8F0),
+                    selection: Color(0x335B9CFF),
+                    foreground: Color(0xFFE2E8F0),
+                    background: Color(0xFF0B1220),
+                    black: Color(0xFF111827),
+                    red: Color(0xFFF87171),
+                    green: Color(0xFF4ADE80),
+                    yellow: Color(0xFFFACC15),
+                    blue: Color(0xFF60A5FA),
+                    magenta: Color(0xFFF472B6),
+                    cyan: Color(0xFF22D3EE),
+                    white: Color(0xFFE5E7EB),
+                    brightBlack: Color(0xFF374151),
+                    brightRed: Color(0xFFEF4444),
+                    brightGreen: Color(0xFF22C55E),
+                    brightYellow: Color(0xFFEAB308),
+                    brightBlue: Color(0xFF3B82F6),
+                    brightMagenta: Color(0xFFEC4899),
+                    brightCyan: Color(0xFF06B6D4),
+                    brightWhite: Color(0xFFF9FAFB),
+                    searchHitBackground: Color(0x66FACC15),
+                    searchHitBackgroundCurrent: Color(0xAAEAB308),
+                    searchHitForeground: Color(0xFF111827),
+                  ),
+                  padding: const EdgeInsets.all(12),
+                  autofocus: true,
+                ),
               ),
             ),
           ),
@@ -96,21 +123,11 @@ class _TerminalPanelState extends State<TerminalPanel> {
           Row(
             children: [
               Expanded(
-                child: TextField(
-                  controller: _inputController,
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    hintText: 'Type command and press Enter',
-                  ),
-                  onSubmitted: (_) => _submit(active.session.id),
+                child: Text(
+                  'Direct terminal input enabled. Press Enter to send command.',
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
               ),
-              const SizedBox(width: 8),
-              FilledButton(
-                onPressed: () => _submit(active.session.id),
-                child: const Text('Send'),
-              ),
-              const SizedBox(width: 8),
               OutlinedButton(
                 onPressed: () => widget.onDeleteSession(active.session.id),
                 child: const Text('Delete Session'),
@@ -122,13 +139,84 @@ class _TerminalPanelState extends State<TerminalPanel> {
     );
   }
 
-  Future<void> _submit(String sessionId) async {
-    final input = _inputController.text;
-    if (input.trim().isEmpty) {
+  void _syncTerminals(List<SessionView> sessions) {
+    final liveIds = sessions.map((item) => item.session.id).toSet();
+    final removedIds = _terminals.keys
+        .where((id) => !liveIds.contains(id))
+        .toList(growable: false);
+
+    for (final id in removedIds) {
+      _terminals.remove(id);
+      _renderedLineCount.remove(id);
+      _pendingInput.remove(id);
+    }
+
+    for (final session in sessions) {
+      final id = session.session.id;
+      final terminal = _terminals.putIfAbsent(id, () {
+        final created = Terminal(maxLines: 5000);
+        created.onOutput = (data) => _handleTerminalOutput(id, data);
+        return created;
+      });
+
+      final rendered = _renderedLineCount[id] ?? 0;
+      if (session.output.length < rendered) {
+        terminal.write('\x1b[2J\x1b[H');
+        for (final line in session.output) {
+          terminal.write('$line\r\n');
+        }
+        _renderedLineCount[id] = session.output.length;
+        continue;
+      }
+
+      if (session.output.length == rendered) {
+        continue;
+      }
+
+      for (var i = rendered; i < session.output.length; i += 1) {
+        terminal.write('${session.output[i]}\r\n');
+      }
+      _renderedLineCount[id] = session.output.length;
+    }
+  }
+
+  void _handleTerminalOutput(String sessionId, String data) {
+    final terminal = _terminals[sessionId];
+    if (terminal == null) {
       return;
     }
 
-    _inputController.clear();
-    await widget.onSendInput(sessionId, input);
+    final inputBuffer = _pendingInput.putIfAbsent(sessionId, StringBuffer.new);
+    final codePoints = data.runes.toList(growable: false);
+
+    for (final codePoint in codePoints) {
+      if (codePoint == 13 || codePoint == 10) {
+        final command = inputBuffer.toString();
+        inputBuffer.clear();
+        terminal.write('\r\n');
+        if (command.trim().isNotEmpty) {
+          widget.onSendInput(sessionId, command);
+        }
+        continue;
+      }
+
+      if (codePoint == 8 || codePoint == 127) {
+        final current = inputBuffer.toString();
+        if (current.isNotEmpty) {
+          inputBuffer.clear();
+          inputBuffer.write(current.substring(0, current.length - 1));
+          terminal.write('\b \b');
+        }
+        continue;
+      }
+
+      if (codePoint < 32) {
+        continue;
+      }
+
+      final char = String.fromCharCode(codePoint);
+      inputBuffer.write(char);
+      terminal.write(char);
+    }
   }
 }
