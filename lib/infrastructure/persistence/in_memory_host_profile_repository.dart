@@ -33,4 +33,9 @@ class InMemoryHostProfileRepository implements HostProfileRepository {
   Future<void> save(HostProfile profile) async {
     _items[profile.id] = profile;
   }
+
+  @override
+  Future<void> deleteById(String id) async {
+    _items.remove(id);
+  }
 }

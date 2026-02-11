@@ -226,6 +226,35 @@ class SessionOrchestrator extends ChangeNotifier {
     return null;
   }
 
+  Future<void> removeHostProfile(String hostId) async {
+    await _hostRepository.deleteById(hostId);
+    _hosts.removeWhere((host) => host.id == hostId);
+
+    final sessionIds = _sessions.entries
+        .where((entry) => entry.value.hostProfile.id == hostId)
+        .map((entry) => entry.key)
+        .toList(growable: false);
+
+    for (final sessionId in sessionIds) {
+      final managed = _sessions.remove(sessionId);
+      if (managed == null) {
+        continue;
+      }
+
+      await managed.connection?.disconnect();
+      await managed.subscription?.cancel();
+    }
+
+    if (_activeSessionId != null && !_sessions.containsKey(_activeSessionId)) {
+      _activeSessionId = _sessions.keys.cast<String?>().firstWhere(
+        (id) => id != null,
+        orElse: () => null,
+      );
+    }
+
+    notifyListeners();
+  }
+
   Future<void> disconnectSession(String sessionId) async {
     final input = _disconnectSessionUseCase.buildInput(sessionId);
     final managed = _sessions[input.sessionId];

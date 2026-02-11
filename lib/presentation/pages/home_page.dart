@@ -40,6 +40,34 @@ class _HomePageState extends State<HomePage> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
   }
 
+  Future<void> _confirmDeleteHost(HostProfile host) async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Delete Host'),
+          content: Text('Delete "${host.name}" from host list?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (!mounted || shouldDelete != true) {
+      return;
+    }
+
+    await widget.orchestrator.removeHostProfile(host.id);
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -56,6 +84,7 @@ class _HomePageState extends State<HomePage> {
                   hosts: widget.orchestrator.hosts,
                   onConnect: widget.orchestrator.connectToHost,
                   onAddHost: _openHostDialog,
+                  onDeleteHost: _confirmDeleteHost,
                 ),
               ),
               const VerticalDivider(width: 1),
@@ -82,12 +111,14 @@ class _HostListPanel extends StatelessWidget {
     required this.hosts,
     required this.onConnect,
     required this.onAddHost,
+    required this.onDeleteHost,
   });
 
   final bool loading;
   final List<HostProfile> hosts;
   final Future<void> Function(String hostId) onConnect;
   final Future<void> Function() onAddHost;
+  final Future<void> Function(HostProfile host) onDeleteHost;
 
   @override
   Widget build(BuildContext context) {
@@ -130,12 +161,21 @@ class _HostListPanel extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text('${host.username}@${host.host}:${host.port}'),
                         const SizedBox(height: 8),
-                        SizedBox(
-                          width: double.infinity,
-                          child: FilledButton(
-                            onPressed: () => onConnect(host.id),
-                            child: const Text('Connect'),
-                          ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: FilledButton(
+                                onPressed: () => onConnect(host.id),
+                                child: const Text('Connect'),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton(
+                              onPressed: () => onDeleteHost(host),
+                              tooltip: 'Delete host',
+                              icon: const Icon(Icons.delete_outline),
+                            ),
+                          ],
                         ),
                       ],
                     ),

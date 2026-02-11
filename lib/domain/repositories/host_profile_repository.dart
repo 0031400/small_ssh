@@ -4,4 +4,5 @@ abstract class HostProfileRepository {
   Future<List<HostProfile>> getAll();
   Future<HostProfile?> findById(String id);
   Future<void> save(HostProfile profile);
+  Future<void> deleteById(String id);
 }
