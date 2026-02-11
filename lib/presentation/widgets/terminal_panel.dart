@@ -8,14 +8,12 @@ class TerminalPanel extends StatefulWidget {
     required this.sessions,
     required this.activeSessionId,
     required this.onSelectSession,
-    required this.onDisconnectSession,
     required this.onDeleteSession,
     required this.onSendInput,
   });
 
   final List<SessionView> sessions;
   final String? activeSessionId;
-  final Future<void> Function(String sessionId) onDisconnectSession;
   final Future<void> Function(String sessionId) onDeleteSession;
   final Future<void> Function(String sessionId, String input) onSendInput;
   final void Function(String sessionId) onSelectSession;
@@ -111,11 +109,6 @@ class _TerminalPanelState extends State<TerminalPanel> {
               FilledButton(
                 onPressed: () => _submit(active.session.id),
                 child: const Text('Send'),
-              ),
-              const SizedBox(width: 8),
-              OutlinedButton(
-                onPressed: () => widget.onDisconnectSession(active.session.id),
-                child: const Text('Disconnect'),
               ),
               const SizedBox(width: 8),
               OutlinedButton(
