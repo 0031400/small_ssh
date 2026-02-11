@@ -87,4 +87,14 @@ class _DartSsh2Connection implements SshConnection {
       _outputController.close();
     }
   }
+
+  @override
+  Future<void> resizeTerminal(
+    int width,
+    int height, {
+    int pixelWidth = 0,
+    int pixelHeight = 0,
+  }) async {
+    _shell.resizeTerminal(width, height, pixelWidth, pixelHeight);
+  }
 }

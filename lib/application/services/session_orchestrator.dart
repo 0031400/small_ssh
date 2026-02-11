@@ -344,6 +344,26 @@ class SessionOrchestrator extends ChangeNotifier {
     await managed.connection!.sendInput(input);
   }
 
+  Future<void> resizeTerminal(
+    String sessionId,
+    int width,
+    int height, {
+    int pixelWidth = 0,
+    int pixelHeight = 0,
+  }) async {
+    final managed = _sessions[sessionId];
+    if (managed == null || managed.connection == null) {
+      return;
+    }
+
+    await managed.connection!.resizeTerminal(
+      width,
+      height,
+      pixelWidth: pixelWidth,
+      pixelHeight: pixelHeight,
+    );
+  }
+
   void setActiveSession(String sessionId) {
     if (_sessions.containsKey(sessionId)) {
       _activeSessionId = sessionId;

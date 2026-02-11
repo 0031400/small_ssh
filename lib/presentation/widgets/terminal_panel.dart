@@ -11,12 +11,21 @@ class TerminalPanel extends StatefulWidget {
     required this.onSelectSession,
     required this.onDeleteSession,
     required this.onSendInput,
+    required this.onResizeTerminal,
   });
 
   final List<SessionView> sessions;
   final String? activeSessionId;
   final Future<void> Function(String sessionId) onDeleteSession;
   final Future<void> Function(String sessionId, String input) onSendInput;
+  final Future<void> Function(
+    String sessionId,
+    int width,
+    int height, {
+    int pixelWidth,
+    int pixelHeight,
+  })
+  onResizeTerminal;
   final void Function(String sessionId) onSelectSession;
 
   @override
@@ -26,11 +35,14 @@ class TerminalPanel extends StatefulWidget {
 class _TerminalPanelState extends State<TerminalPanel> {
   final Map<String, Terminal> _terminals = <String, Terminal>{};
   final Map<String, int> _renderedLineCount = <String, int>{};
+  final Map<String, _TerminalGridSize> _lastSyncedGridSize =
+      <String, _TerminalGridSize>{};
 
   @override
   void dispose() {
     _terminals.clear();
     _renderedLineCount.clear();
+    _lastSyncedGridSize.clear();
     super.dispose();
   }
 
@@ -146,6 +158,7 @@ class _TerminalPanelState extends State<TerminalPanel> {
     for (final id in removedIds) {
       _terminals.remove(id);
       _renderedLineCount.remove(id);
+      _lastSyncedGridSize.remove(id);
     }
 
     for (final session in sessions) {
@@ -153,8 +166,18 @@ class _TerminalPanelState extends State<TerminalPanel> {
       final terminal = _terminals.putIfAbsent(id, () {
         final created = Terminal(maxLines: 5000);
         created.onOutput = (data) => widget.onSendInput(id, data);
+        created.onResize = (width, height, pixelWidth, pixelHeight) {
+          widget.onResizeTerminal(
+            id,
+            width,
+            height,
+            pixelWidth: pixelWidth,
+            pixelHeight: pixelHeight,
+          );
+        };
         return created;
       });
+      _syncTerminalGridSize(id, terminal);
 
       final rendered = _renderedLineCount[id] ?? 0;
       if (session.output.length < rendered) {
@@ -176,4 +199,37 @@ class _TerminalPanelState extends State<TerminalPanel> {
       _renderedLineCount[id] = session.output.length;
     }
   }
+
+  void _syncTerminalGridSize(String sessionId, Terminal terminal) {
+    final width = terminal.viewWidth;
+    final height = terminal.viewHeight;
+    if (width <= 0 || height <= 0) {
+      return;
+    }
+
+    final next = _TerminalGridSize(width: width, height: height);
+    if (_lastSyncedGridSize[sessionId] == next) {
+      return;
+    }
+
+    _lastSyncedGridSize[sessionId] = next;
+    widget.onResizeTerminal(sessionId, width, height);
+  }
+}
+
+class _TerminalGridSize {
+  const _TerminalGridSize({required this.width, required this.height});
+
+  final int width;
+  final int height;
+
+  @override
+  bool operator ==(Object other) {
+    return other is _TerminalGridSize &&
+        other.width == width &&
+        other.height == height;
+  }
+
+  @override
+  int get hashCode => Object.hash(width, height);
 }

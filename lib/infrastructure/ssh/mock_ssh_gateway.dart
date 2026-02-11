@@ -105,6 +105,14 @@ class _MockSshConnection implements SshConnection {
     }
   }
 
+  @override
+  Future<void> resizeTerminal(
+    int width,
+    int height, {
+    int pixelWidth = 0,
+    int pixelHeight = 0,
+  }) async {}
+
   void _emit(String line) {
     if (!_outputController.isClosed) {
       _outputController.add(line);

@@ -18,6 +18,12 @@ abstract class SshConnection {
   String get id;
   Stream<String> get output;
   Future<void> sendInput(String input);
+  Future<void> resizeTerminal(
+    int width,
+    int height, {
+    int pixelWidth = 0,
+    int pixelHeight = 0,
+  });
   Future<void> disconnect();
 }
 
