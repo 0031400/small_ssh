@@ -114,7 +114,7 @@ class SessionOrchestrator extends ChangeNotifier {
     final pendingManaged = _ManagedSession(
       hostProfile: host,
       session: pendingSession,
-      output: <String>['Connecting to ${host.host}:${host.port}...'],
+      output: <String>['Connecting to ${host.host}:${host.port}...\r\n'],
     );
 
     _sessions[pendingSession.id] = pendingManaged;
@@ -176,7 +176,7 @@ class SessionOrchestrator extends ChangeNotifier {
         status: ConnectionStateStatus.error,
         lastError: error.toString(),
       );
-      pendingManaged.output.add('Connection failed: $error');
+      pendingManaged.output.add('Connection failed: $error\r\n');
       notifyListeners();
     }
   }

@@ -59,11 +59,11 @@ class _DartSsh2Connection implements SshConnection {
 
   @override
   Future<void> sendInput(String input) async {
-    if (input.trim().isEmpty) {
+    if (input.isEmpty) {
       return;
     }
 
-    _shell.write(Uint8List.fromList(utf8.encode('$input\n')));
+    _shell.write(Uint8List.fromList(utf8.encode(input)));
   }
 
   @override
@@ -76,13 +76,9 @@ class _DartSsh2Connection implements SshConnection {
   }
 
   void _handleChunk(Uint8List chunk) {
-    final text = utf8.decode(chunk, allowMalformed: true).replaceAll('\r', '');
-    final lines = text.split('\n');
-
-    for (final line in lines) {
-      if (line.isNotEmpty && !_outputController.isClosed) {
-        _outputController.add(line);
-      }
+    final text = utf8.decode(chunk, allowMalformed: true);
+    if (text.isNotEmpty && !_outputController.isClosed) {
+      _outputController.add(text);
     }
   }
 

@@ -26,13 +26,11 @@ class TerminalPanel extends StatefulWidget {
 class _TerminalPanelState extends State<TerminalPanel> {
   final Map<String, Terminal> _terminals = <String, Terminal>{};
   final Map<String, int> _renderedLineCount = <String, int>{};
-  final Map<String, StringBuffer> _pendingInput = <String, StringBuffer>{};
 
   @override
   void dispose() {
     _terminals.clear();
     _renderedLineCount.clear();
-    _pendingInput.clear();
     super.dispose();
   }
 
@@ -86,8 +84,8 @@ class _TerminalPanelState extends State<TerminalPanel> {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: TerminalView(
-                  hardwareKeyboardOnly:true,
                   terminal,
+                  hardwareKeyboardOnly: true,
                   theme: const TerminalTheme(
                     cursor: Color(0xFFE2E8F0),
                     selection: Color(0x335B9CFF),
@@ -148,22 +146,21 @@ class _TerminalPanelState extends State<TerminalPanel> {
     for (final id in removedIds) {
       _terminals.remove(id);
       _renderedLineCount.remove(id);
-      _pendingInput.remove(id);
     }
 
     for (final session in sessions) {
       final id = session.session.id;
       final terminal = _terminals.putIfAbsent(id, () {
         final created = Terminal(maxLines: 5000);
-        created.onOutput = (data) => _handleTerminalOutput(id, data);
+        created.onOutput = (data) => widget.onSendInput(id, data);
         return created;
       });
 
       final rendered = _renderedLineCount[id] ?? 0;
       if (session.output.length < rendered) {
         terminal.write('\x1b[2J\x1b[H');
-        for (final line in session.output) {
-          terminal.write('$line\r\n');
+        for (final chunk in session.output) {
+          terminal.write(chunk);
         }
         _renderedLineCount[id] = session.output.length;
         continue;
@@ -174,49 +171,9 @@ class _TerminalPanelState extends State<TerminalPanel> {
       }
 
       for (var i = rendered; i < session.output.length; i += 1) {
-        terminal.write('${session.output[i]}\r\n');
+        terminal.write(session.output[i]);
       }
       _renderedLineCount[id] = session.output.length;
-    }
-  }
-
-  void _handleTerminalOutput(String sessionId, String data) {
-    final terminal = _terminals[sessionId];
-    if (terminal == null) {
-      return;
-    }
-
-    final inputBuffer = _pendingInput.putIfAbsent(sessionId, StringBuffer.new);
-    final codePoints = data.runes.toList(growable: false);
-
-    for (final codePoint in codePoints) {
-      if (codePoint == 13 || codePoint == 10) {
-        final command = inputBuffer.toString();
-        inputBuffer.clear();
-        terminal.write('\r\n');
-        if (command.trim().isNotEmpty) {
-          widget.onSendInput(sessionId, command);
-        }
-        continue;
-      }
-
-      if (codePoint == 8 || codePoint == 127) {
-        final current = inputBuffer.toString();
-        if (current.isNotEmpty) {
-          inputBuffer.clear();
-          inputBuffer.write(current.substring(0, current.length - 1));
-          terminal.write('\b \b');
-        }
-        continue;
-      }
-
-      if (codePoint < 32) {
-        continue;
-      }
-
-      final char = String.fromCharCode(codePoint);
-      inputBuffer.write(char);
-      terminal.write(char);
     }
   }
 }

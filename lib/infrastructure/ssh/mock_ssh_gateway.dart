@@ -20,8 +20,8 @@ class MockSshGateway implements SshGateway {
 
 class _MockSshConnection implements SshConnection {
   _MockSshConnection({required this.id, required this.request}) {
-    _emit('Connected to ${request.username}@${request.host}:${request.port}');
-    _emit('Mock shell ready. Type and press Enter.');
+    _emit('Connected to ${request.username}@${request.host}:${request.port}\r\n');
+    _emit('Mock shell ready. Type and press Enter.\r\n');
   }
 
   @override
@@ -30,36 +30,77 @@ class _MockSshConnection implements SshConnection {
 
   final StreamController<String> _outputController =
       StreamController<String>.broadcast();
+  final StringBuffer _inputBuffer = StringBuffer();
 
   @override
   Stream<String> get output => _outputController.stream;
 
   @override
   Future<void> sendInput(String input) async {
-    final trimmed = input.trim();
-    if (trimmed.isEmpty) {
+    if (input.isEmpty) {
       return;
     }
 
-    if (trimmed == 'clear') {
-      _emit('[screen cleared in real terminal]');
-      return;
-    }
+    for (final rune in input.runes) {
+      if (rune == 3) {
+        _emit('^C\r\n');
+        _inputBuffer.clear();
+        continue;
+      }
 
-    if (trimmed == 'exit') {
-      _emit('Session closing...');
-      await disconnect();
-      return;
-    }
+      if (rune == 27) {
+        _emit('^[',);
+        continue;
+      }
 
-    _emit('\$ $trimmed');
-    _emit('echo: $trimmed');
+      if (rune == 8 || rune == 127) {
+        if (_inputBuffer.isNotEmpty) {
+          final current = _inputBuffer.toString();
+          _inputBuffer
+            ..clear()
+            ..write(current.substring(0, current.length - 1));
+          _emit('\b \b');
+        }
+        continue;
+      }
+
+      if (rune == 13 || rune == 10) {
+        final command = _inputBuffer.toString().trim();
+        _inputBuffer.clear();
+        _emit('\r\n');
+        if (command.isEmpty) {
+          continue;
+        }
+
+        if (command == 'clear') {
+          _emit('\x1b[2J\x1b[H');
+          continue;
+        }
+
+        if (command == 'exit') {
+          _emit('Session closing...\r\n');
+          await disconnect();
+          return;
+        }
+
+        _emit('echo: $command\r\n');
+        continue;
+      }
+
+      if (rune < 32) {
+        continue;
+      }
+
+      final char = String.fromCharCode(rune);
+      _inputBuffer.write(char);
+      _emit(char);
+    }
   }
 
   @override
   Future<void> disconnect() async {
     if (!_outputController.isClosed) {
-      _emit('Disconnected.');
+      _emit('Disconnected.\r\n');
       await _outputController.close();
     }
   }
