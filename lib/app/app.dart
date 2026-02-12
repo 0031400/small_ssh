@@ -30,6 +30,7 @@ class _SmallSshAppState extends State<SmallSshApp> {
     _hostRepository = FileHostProfileRepository();
     _credentialRepository = InMemoryCredentialRepository();
     _settings = AppSettings();
+    _settings.load();
 
     _orchestrator = SessionOrchestrator(
       hostRepository: _hostRepository,
