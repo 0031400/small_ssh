@@ -174,32 +174,39 @@ class _HomePageState extends State<HomePage> {
               ),
             ],
           ),
-          body: Row(
-            children: [
-              SizedBox(
-                width: 320,
-                child: _HostListPanel(
-                  loading: widget.orchestrator.loadingHosts,
-                  hosts: widget.orchestrator.hosts,
-                  onConnect: _connectToHost,
-                  onAddHost: _openHostDialog,
-                  onEditHost: _openEditHostDialog,
-                  onDeleteHost: _confirmDeleteHost,
+          body: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 320,
+                  child: Card(
+                    child: _HostListPanel(
+                      loading: widget.orchestrator.loadingHosts,
+                      hosts: widget.orchestrator.hosts,
+                      onConnect: _connectToHost,
+                      onAddHost: _openHostDialog,
+                      onEditHost: _openEditHostDialog,
+                      onDeleteHost: _confirmDeleteHost,
+                    ),
+                  ),
                 ),
-              ),
-              const VerticalDivider(width: 1),
-              Expanded(
-                child: TerminalPanel(
-                  sessions: widget.orchestrator.sessions,
-                  activeSessionId: widget.orchestrator.activeSessionId,
-                  onSelectSession: widget.orchestrator.setActiveSession,
-                  onDeleteSession: widget.orchestrator.removeSession,
-                  onSendInput: widget.orchestrator.sendInput,
-                  onResizeTerminal: widget.orchestrator.resizeTerminal,
-                  settings: widget.settings,
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Card(
+                    child: TerminalPanel(
+                      sessions: widget.orchestrator.sessions,
+                      activeSessionId: widget.orchestrator.activeSessionId,
+                      onSelectSession: widget.orchestrator.setActiveSession,
+                      onDeleteSession: widget.orchestrator.removeSession,
+                      onSendInput: widget.orchestrator.sendInput,
+                      onResizeTerminal: widget.orchestrator.resizeTerminal,
+                      settings: widget.settings,
+                    ),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },

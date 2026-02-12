@@ -59,8 +59,12 @@ class _TerminalPanelState extends State<TerminalPanel> {
   @override
   Widget build(BuildContext context) {
     if (widget.sessions.isEmpty) {
-      return const Center(
-        child: Text('No active session. Choose a host and connect.'),
+      final textTheme = Theme.of(context).textTheme;
+      return Center(
+        child: Text(
+          'No active session. Choose a host and connect.',
+          style: textTheme.bodyMedium,
+        ),
       );
     }
 
@@ -103,6 +107,7 @@ class _TerminalPanelState extends State<TerminalPanel> {
               decoration: BoxDecoration(
                 color: const Color(0xFF0B1220),
                 borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Theme.of(context).dividerColor),
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),

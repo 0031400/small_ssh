@@ -1,28 +1,208 @@
 import 'package:flutter/material.dart';
 
 ThemeData buildAppTheme() {
-  final scheme = ColorScheme.fromSeed(seedColor: const Color(0xFF1D3557));
-
-  return ThemeData(
-    colorScheme: scheme,
-    scaffoldBackgroundColor: const Color(0xFFF1F5F9),
+  final scheme = ColorScheme.fromSeed(
+    seedColor: const Color(0xFF3B4B5A),
+    brightness: Brightness.light,
+  );
+  final base = ThemeData(
     useMaterial3: true,
-    appBarTheme: const AppBarTheme(centerTitle: false),
-    cardTheme: const CardThemeData(margin: EdgeInsets.zero),
+    colorScheme: scheme,
+  );
+
+  final textTheme = base.textTheme.copyWith(
+    titleLarge: base.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+    titleMedium:
+        base.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+  );
+
+  return base.copyWith(
+    textTheme: textTheme,
+    scaffoldBackgroundColor: const Color(0xFFF8FAFC),
+    appBarTheme: AppBarTheme(
+      centerTitle: false,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      backgroundColor: const Color(0xFFF8FAFC),
+      surfaceTintColor: Colors.transparent,
+      titleTextStyle: textTheme.titleLarge?.copyWith(color: scheme.onSurface),
+    ),
+    cardTheme: CardThemeData(
+      margin: EdgeInsets.zero,
+      elevation: 0,
+      color: scheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: scheme.outlineVariant),
+      ),
+    ),
+    dividerTheme: DividerThemeData(
+      color: scheme.outlineVariant,
+      thickness: 1,
+      space: 1,
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: const Color(0xFFF1F5F9),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: scheme.outlineVariant),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: scheme.outlineVariant),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: scheme.primary, width: 1.4),
+      ),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        side: BorderSide(color: scheme.outlineVariant),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    ),
+    chipTheme: base.chipTheme.copyWith(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      side: BorderSide(color: scheme.outlineVariant),
+      labelStyle: textTheme.bodyMedium,
+    ),
+    listTileTheme: const ListTileThemeData(
+      dense: true,
+      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+    ),
+    dialogTheme: DialogThemeData(
+      backgroundColor: scheme.surface,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      titleTextStyle: textTheme.titleLarge?.copyWith(color: scheme.onSurface),
+      contentTextStyle: textTheme.bodyMedium?.copyWith(color: scheme.onSurface),
+    ),
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    ),
+    popupMenuTheme: PopupMenuThemeData(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      color: scheme.surface,
+    ),
   );
 }
 
 ThemeData buildAppDarkTheme() {
   final scheme = ColorScheme.fromSeed(
-    seedColor: const Color(0xFF1D3557),
+    seedColor: const Color(0xFF3B4B5A),
     brightness: Brightness.dark,
   );
-
-  return ThemeData(
-    colorScheme: scheme,
-    scaffoldBackgroundColor: const Color(0xFF0F172A),
+  final base = ThemeData(
     useMaterial3: true,
-    appBarTheme: const AppBarTheme(centerTitle: false),
-    cardTheme: const CardThemeData(margin: EdgeInsets.zero),
+    colorScheme: scheme,
+  );
+  final textTheme = base.textTheme.copyWith(
+    titleLarge: base.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+    titleMedium:
+        base.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+  );
+
+  return base.copyWith(
+    textTheme: textTheme,
+    scaffoldBackgroundColor: const Color(0xFF0B1118),
+    appBarTheme: AppBarTheme(
+      centerTitle: false,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      backgroundColor: const Color(0xFF0B1118),
+      surfaceTintColor: Colors.transparent,
+      titleTextStyle: textTheme.titleLarge?.copyWith(color: scheme.onSurface),
+    ),
+    cardTheme: CardThemeData(
+      margin: EdgeInsets.zero,
+      elevation: 0,
+      color: scheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: scheme.outlineVariant),
+      ),
+    ),
+    dividerTheme: DividerThemeData(
+      color: scheme.outlineVariant,
+      thickness: 1,
+      space: 1,
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: const Color(0xFF121821),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: scheme.outlineVariant),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: scheme.outlineVariant),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: scheme.primary, width: 1.4),
+      ),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        side: BorderSide(color: scheme.outlineVariant),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    ),
+    chipTheme: base.chipTheme.copyWith(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      side: BorderSide(color: scheme.outlineVariant),
+      labelStyle: textTheme.bodyMedium,
+    ),
+    listTileTheme: const ListTileThemeData(
+      dense: true,
+      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+    ),
+    dialogTheme: DialogThemeData(
+      backgroundColor: scheme.surface,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      titleTextStyle: textTheme.titleLarge?.copyWith(color: scheme.onSurface),
+      contentTextStyle: textTheme.bodyMedium?.copyWith(color: scheme.onSurface),
+    ),
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    ),
+    popupMenuTheme: PopupMenuThemeData(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      color: scheme.surface,
+    ),
   );
 }
