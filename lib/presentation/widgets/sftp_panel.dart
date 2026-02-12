@@ -1,3 +1,4 @@
+import 'package:desktop_drop/desktop_drop.dart';
 import 'package:flutter/material.dart';
 import 'package:small_ssh/application/services/session_orchestrator.dart';
 import 'package:small_ssh/domain/models/connection_state_status.dart';
@@ -27,6 +28,7 @@ class _SftpPanelState extends State<SftpPanel> {
   String? _error;
   SftpEntry? _selected;
   bool _available = true;
+  bool _dragging = false;
 
   @override
   void didUpdateWidget(covariant SftpPanel oldWidget) {
@@ -222,6 +224,39 @@ class _SftpPanelState extends State<SftpPanel> {
     }
   }
 
+  Future<void> _uploadDroppedFiles(List<DropItem> files) async {
+    final sessionId = _sessionId;
+    final current = _currentPath;
+    if (sessionId == null || current == null || files.isEmpty) {
+      return;
+    }
+    try {
+      for (final item in files) {
+        final localPath = item.path;
+        if (localPath.isEmpty) {
+          continue;
+        }
+        final fileName = _basename(localPath);
+        final remotePath = _joinRemote(current, fileName);
+        await widget.orchestrator.uploadSftpFile(
+          sessionId: sessionId,
+          localPath: localPath,
+          remotePath: remotePath,
+        );
+      }
+      if (!mounted) return;
+      await _refresh();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Upload completed.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Upload failed: $error')),
+      );
+    }
+  }
+
   String _basename(String path) {
     final normalized = path.replaceAll('\\', '/');
     final index = normalized.lastIndexOf('/');
@@ -285,27 +320,29 @@ class _SftpPanelState extends State<SftpPanel> {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+          padding: const EdgeInsets.fromLTRB(10, 10, 10, 6),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  const Icon(Icons.folder_outlined, size: 18),
-                  const SizedBox(width: 8),
+                  const Icon(Icons.folder_outlined, size: 16),
+                  const SizedBox(width: 6),
                   Text('SFTP', style: Theme.of(context).textTheme.titleSmall),
                   const Spacer(),
                   IconButton(
                     tooltip: 'Up',
+                    visualDensity: VisualDensity.compact,
                     onPressed: !isConnected || _loading || path == '/'
                         ? null
                         : () => _loadDirectory(_parentPath(path)),
-                    icon: const Icon(Icons.arrow_upward),
+                    icon: const Icon(Icons.arrow_upward, size: 18),
                   ),
                   IconButton(
                     tooltip: 'Refresh',
+                    visualDensity: VisualDensity.compact,
                     onPressed: !isConnected || _loading ? null : _refresh,
-                    icon: const Icon(Icons.refresh),
+                    icon: const Icon(Icons.refresh, size: 18),
                   ),
                 ],
               ),
@@ -316,19 +353,43 @@ class _SftpPanelState extends State<SftpPanel> {
                     .bodySmall
                     ?.copyWith(color: Colors.grey.shade600),
               ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: !isConnected || _loading
-                          ? null
-                          : _uploadFromLocal,
-                      icon: const Icon(Icons.paste),
-                      label: const Text('Paste'),
+              const SizedBox(height: 6),
+              DropTarget(
+                onDragEntered: (_) => setState(() => _dragging = true),
+                onDragExited: (_) => setState(() => _dragging = false),
+                onDragDone: (details) async {
+                  setState(() => _dragging = false);
+                  if (!isConnected || _loading) {
+                    return;
+                  }
+                  if (details.files.isEmpty) {
+                    return;
+                  }
+                  await _uploadDroppedFiles(details.files);
+                },
+                child: Container(
+                  height: 36,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: _dragging
+                        ? Theme.of(context).colorScheme.primaryContainer
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: _dragging
+                          ? Theme.of(context).colorScheme.primary
+                          : Colors.grey.shade300,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  child: Text(
+                    'Drag files here to upload',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Row(
+                children: [
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: !isConnected ||
@@ -337,9 +398,16 @@ class _SftpPanelState extends State<SftpPanel> {
                               _selected!.isDirectory
                           ? null
                           : _downloadSelected,
-                      icon: const Icon(Icons.copy),
+                      icon: const Icon(Icons.copy, size: 18),
                       label: const Text('Copy'),
                     ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    tooltip: 'Upload by path',
+                    onPressed:
+                        !isConnected || _loading ? null : _uploadFromLocal,
+                    icon: const Icon(Icons.upload_file, size: 18),
                   ),
                 ],
               ),
@@ -375,14 +443,16 @@ class _SftpPanelState extends State<SftpPanel> {
       return const Center(child: Text('No files'));
     }
     return ListView.separated(
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(6),
       itemCount: _entries.length,
-      separatorBuilder: (context, index) => const SizedBox(height: 4),
+      separatorBuilder: (context, index) => const SizedBox(height: 2),
       itemBuilder: (context, index) {
         final entry = _entries[index];
         final isSelected = _selected?.path == entry.path;
         return ListTile(
           dense: true,
+          visualDensity: VisualDensity.compact,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 8),
           selected: isSelected,
           leading: Icon(
             entry.isDirectory ? Icons.folder : Icons.insert_drive_file_outlined,
