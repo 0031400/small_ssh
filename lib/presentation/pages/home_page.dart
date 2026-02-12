@@ -5,6 +5,7 @@ import 'package:small_ssh/domain/models/host_profile.dart';
 import 'package:small_ssh/presentation/widgets/host_form_dialog.dart';
 import 'package:small_ssh/presentation/widgets/password_prompt_dialog.dart';
 import 'package:small_ssh/presentation/widgets/terminal_panel.dart';
+import 'package:small_ssh/presentation/pages/settings_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key, required this.orchestrator});
@@ -115,13 +116,30 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  void _openSettings() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const SettingsPage(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: widget.orchestrator,
       builder: (context, _) {
         return Scaffold(
-          appBar: AppBar(title: const Text('small_ssh')),
+          appBar: AppBar(
+            title: const Text('small_ssh'),
+            actions: [
+              IconButton(
+                tooltip: 'Settings',
+                onPressed: _openSettings,
+                icon: const Icon(Icons.settings_outlined),
+              ),
+            ],
+          ),
           body: Row(
             children: [
               SizedBox(
