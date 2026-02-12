@@ -144,6 +144,7 @@ class _MockSshConnection implements SshConnection {
   Future<void> downloadSftpFile({
     required String remotePath,
     required String localPath,
+    void Function(int transferred, int total)? onProgress,
   }) async {
     throw UnsupportedError('Mock SFTP download not implemented');
   }
@@ -152,6 +153,7 @@ class _MockSshConnection implements SshConnection {
   Future<void> uploadSftpFile({
     required String localPath,
     required String remotePath,
+    void Function(int transferred, int total)? onProgress,
   }) async {
     throw UnsupportedError('Mock SFTP upload not implemented');
   }

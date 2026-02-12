@@ -32,6 +32,10 @@ class _SftpPanelState extends State<SftpPanel> {
   int? _lastSelectedIndex;
   bool _available = true;
   bool _dragging = false;
+  bool _transferActive = false;
+  String? _transferLabel;
+  double? _transferProgress;
+  DateTime? _lastProgressPaint;
 
   @override
   void didUpdateWidget(covariant SftpPanel oldWidget) {
@@ -188,20 +192,25 @@ class _SftpPanelState extends State<SftpPanel> {
     }
     try {
       for (final entry in filesOnly) {
-        final localPath =
-            _joinLocal(directory.trim(), entry.name);
+        _startTransfer('Downloading', entry.name);
+        final localPath = _joinLocal(directory.trim(), entry.name);
         await widget.orchestrator.downloadSftpFile(
           sessionId: sessionId,
           remotePath: entry.path,
           localPath: localPath,
+          onProgress: (transferred, total) {
+            _updateTransferProgress(transferred, total);
+          },
         );
       }
       if (!mounted) return;
+      _finishTransfer();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Download completed.')),
       );
     } catch (error) {
       if (!mounted) return;
+      _finishTransfer();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Download failed: $error')),
       );
@@ -225,18 +234,24 @@ class _SftpPanelState extends State<SftpPanel> {
     final fileName = _basename(localPath.trim());
     final remotePath = _joinRemote(current, fileName);
     try {
+      _startTransfer('Uploading', fileName);
       await widget.orchestrator.uploadSftpFile(
         sessionId: sessionId,
         localPath: localPath.trim(),
         remotePath: remotePath,
+        onProgress: (transferred, total) {
+          _updateTransferProgress(transferred, total);
+        },
       );
       if (!mounted) return;
+      _finishTransfer();
       await _refresh();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Upload completed.')),
       );
     } catch (error) {
       if (!mounted) return;
+      _finishTransfer();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Upload failed: $error')),
       );
@@ -257,19 +272,25 @@ class _SftpPanelState extends State<SftpPanel> {
         }
         final fileName = _basename(localPath);
         final remotePath = _joinRemote(current, fileName);
+        _startTransfer('Uploading', fileName);
         await widget.orchestrator.uploadSftpFile(
           sessionId: sessionId,
           localPath: localPath,
           remotePath: remotePath,
+          onProgress: (transferred, total) {
+            _updateTransferProgress(transferred, total);
+          },
         );
       }
       if (!mounted) return;
+      _finishTransfer();
       await _refresh();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Upload completed.')),
       );
     } catch (error) {
       if (!mounted) return;
+      _finishTransfer();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Upload failed: $error')),
       );
@@ -366,6 +387,37 @@ class _SftpPanelState extends State<SftpPanel> {
       return '$base$name';
     }
     return '$base\\$name';
+  }
+
+  void _startTransfer(String action, String name) {
+    _transferActive = true;
+    _transferLabel = '$action: $name';
+    _transferProgress = 0;
+    _lastProgressPaint = null;
+    setState(() {});
+  }
+
+  void _updateTransferProgress(int transferred, int total) {
+    if (total <= 0) {
+      return;
+    }
+    final now = DateTime.now();
+    if (_lastProgressPaint != null &&
+        now.difference(_lastProgressPaint!).inMilliseconds < 100) {
+      return;
+    }
+    _lastProgressPaint = now;
+    setState(() {
+      _transferProgress = transferred / total;
+    });
+  }
+
+  void _finishTransfer() {
+    _transferActive = false;
+    _transferLabel = null;
+    _transferProgress = null;
+    _lastProgressPaint = null;
+    setState(() {});
   }
 
   Future<String?> _promptForText({
@@ -487,6 +539,15 @@ class _SftpPanelState extends State<SftpPanel> {
                   ),
                 ],
               ),
+              if (_transferActive) ...[
+                const SizedBox(height: 6),
+                Text(
+                  _transferLabel ?? 'Transferring...',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 4),
+                LinearProgressIndicator(value: _transferProgress),
+              ],
               Text(
                 path,
                 style: Theme.of(context)

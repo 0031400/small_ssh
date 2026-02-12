@@ -206,20 +206,42 @@ class _DartSsh2Connection implements SshConnection {
   Future<void> downloadSftpFile({
     required String remotePath,
     required String localPath,
+    void Function(int transferred, int total)? onProgress,
   }) async {
     final sftp = await _openSftp();
     final file = await sftp.open(remotePath, mode: SftpFileOpenMode.read);
-    final bytes = await file.readBytes();
-    await file.close();
     final localFile = File(localPath);
     await localFile.parent.create(recursive: true);
-    await localFile.writeAsBytes(bytes, flush: true);
+    final sink = localFile.openWrite();
+    int total = 0;
+    try {
+      final stat = await sftp.stat(remotePath);
+      total = stat.size ?? 0;
+    } catch (_) {
+      total = 0;
+    }
+    await for (final chunk in file.read(
+      onProgress: (read) {
+        if (total > 0 && onProgress != null) {
+          onProgress(read, total);
+        }
+      },
+    )) {
+      sink.add(chunk);
+    }
+    await sink.close();
+    await file.close();
+    if (total == 0 && onProgress != null) {
+      final length = await localFile.length();
+      onProgress(length, length);
+    }
   }
 
   @override
   Future<void> uploadSftpFile({
     required String localPath,
     required String remotePath,
+    void Function(int transferred, int total)? onProgress,
   }) async {
     final localFile = File(localPath);
     if (!await localFile.exists()) {
@@ -232,8 +254,14 @@ class _DartSsh2Connection implements SshConnection {
           SftpFileOpenMode.create |
           SftpFileOpenMode.truncate,
     );
+    final total = await localFile.length();
     final writer = file.write(
       localFile.openRead().map((chunk) => Uint8List.fromList(chunk)),
+      onProgress: (written) {
+        if (onProgress != null) {
+          onProgress(written, total);
+        }
+      },
     );
     await writer.done;
     await file.close();

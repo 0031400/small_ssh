@@ -498,6 +498,7 @@ class SessionOrchestrator extends ChangeNotifier {
     required String sessionId,
     required String remotePath,
     required String localPath,
+    void Function(int transferred, int total)? onProgress,
   }) async {
     final managed = _sessions[sessionId];
     if (managed == null || managed.connection == null) {
@@ -506,6 +507,7 @@ class SessionOrchestrator extends ChangeNotifier {
     await managed.connection!.downloadSftpFile(
       remotePath: remotePath,
       localPath: localPath,
+      onProgress: onProgress,
     );
   }
 
@@ -513,6 +515,7 @@ class SessionOrchestrator extends ChangeNotifier {
     required String sessionId,
     required String localPath,
     required String remotePath,
+    void Function(int transferred, int total)? onProgress,
   }) async {
     final managed = _sessions[sessionId];
     if (managed == null || managed.connection == null) {
@@ -521,6 +524,7 @@ class SessionOrchestrator extends ChangeNotifier {
     await managed.connection!.uploadSftpFile(
       localPath: localPath,
       remotePath: remotePath,
+      onProgress: onProgress,
     );
   }
 

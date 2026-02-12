@@ -45,10 +45,12 @@ abstract class SshConnection {
   Future<void> downloadSftpFile({
     required String remotePath,
     required String localPath,
+    void Function(int transferred, int total)? onProgress,
   });
   Future<void> uploadSftpFile({
     required String localPath,
     required String remotePath,
+    void Function(int transferred, int total)? onProgress,
   });
   Future<void> disconnect();
 }
