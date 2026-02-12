@@ -166,34 +166,36 @@ class _SftpPanelState extends State<SftpPanel> {
     if (sessionId == null) {
       return;
     }
-    if (_selectedPaths.length != 1) {
+    if (_selectedPaths.isEmpty) {
       return;
     }
-    final selected = _entries.firstWhere(
-      (entry) => entry.path == _selectedPaths.first,
-      orElse: () => const SftpEntry(
-        name: '',
-        path: '',
-        isDirectory: true,
-      ),
-    );
-    if (selected.path.isEmpty || selected.isDirectory) {
+    final selectedEntries = _entries
+        .where((entry) => _selectedPaths.contains(entry.path))
+        .toList(growable: false);
+    final filesOnly =
+        selectedEntries.where((entry) => !entry.isDirectory).toList();
+    if (filesOnly.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Only files can be downloaded.')),
+      );
       return;
     }
-    final localPath = await _promptForPath(
-      title: 'Copy to Local',
-      hint: 'C:\\path\\to\\${selected.name}',
-      actionLabel: 'Copy',
+    final directory = await FilePicker.platform.getDirectoryPath(
+      dialogTitle: 'Select download folder',
     );
-    if (localPath == null || localPath.trim().isEmpty) {
+    if (directory == null || directory.trim().isEmpty) {
       return;
     }
     try {
-      await widget.orchestrator.downloadSftpFile(
-        sessionId: sessionId,
-        remotePath: selected.path,
-        localPath: localPath.trim(),
-      );
+      for (final entry in filesOnly) {
+        final localPath =
+            _joinLocal(directory.trim(), entry.name);
+        await widget.orchestrator.downloadSftpFile(
+          sessionId: sessionId,
+          remotePath: entry.path,
+          localPath: localPath,
+        );
+      }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Download completed.')),
@@ -359,38 +361,11 @@ class _SftpPanelState extends State<SftpPanel> {
     return normalized.substring(index + 1);
   }
 
-  Future<String?> _promptForPath({
-    required String title,
-    required String hint,
-    required String actionLabel,
-  }) async {
-    final controller = TextEditingController();
-    return showDialog<String>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(title),
-          content: TextField(
-            controller: controller,
-            decoration: InputDecoration(
-              labelText: 'Local path',
-              hintText: hint,
-            ),
-            autofocus: true,
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(controller.text),
-              child: Text(actionLabel),
-            ),
-          ],
-        );
-      },
-    );
+  String _joinLocal(String base, String name) {
+    if (base.endsWith('\\') || base.endsWith('/')) {
+      return '$base$name';
+    }
+    return '$base\\$name';
   }
 
   Future<String?> _promptForText({
@@ -556,18 +531,16 @@ class _SftpPanelState extends State<SftpPanel> {
               const SizedBox(height: 6),
               Row(
                 children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: !isConnected ||
-                              _loading ||
-                              _selectedPaths.length != 1
-                          ? null
-                          : _downloadSelected,
-                      icon: const Icon(Icons.copy, size: 18),
-                      label: const Text('Copy'),
-                    ),
+                  IconButton(
+                    tooltip: 'Download',
+                    onPressed: !isConnected ||
+                            _loading ||
+                            _selectedPaths.isEmpty
+                        ? null
+                        : _downloadSelected,
+                    icon: const Icon(Icons.download, size: 18),
                   ),
-                  const SizedBox(width: 8),
+                  const Spacer(),
                   IconButton(
                     tooltip: 'Upload',
                     onPressed:
