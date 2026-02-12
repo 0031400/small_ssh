@@ -25,6 +25,9 @@ class SftpPanel extends StatefulWidget {
 class _SftpPanelState extends State<SftpPanel> {
   String? _sessionId;
   String? _currentPath;
+  final TextEditingController _pathController = TextEditingController();
+  final FocusNode _pathFocusNode = FocusNode();
+  bool _editingPath = false;
   List<SftpEntry> _entries = <SftpEntry>[];
   bool _loading = false;
   String? _error;
@@ -50,6 +53,18 @@ class _SftpPanelState extends State<SftpPanel> {
   void initState() {
     super.initState();
     _handleSessionChange();
+    _pathFocusNode.addListener(() {
+      if (!_pathFocusNode.hasFocus && _editingPath) {
+        setState(() => _editingPath = false);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _pathController.dispose();
+    _pathFocusNode.dispose();
+    super.dispose();
   }
 
   void _handleSessionChange() {
@@ -57,6 +72,7 @@ class _SftpPanelState extends State<SftpPanel> {
     _selectedPaths.clear();
     _entries = <SftpEntry>[];
     _currentPath = null;
+    _pathController.text = '';
     _error = null;
     _available = true;
     if (_sessionId == null) {
@@ -119,6 +135,9 @@ class _SftpPanelState extends State<SftpPanel> {
       setState(() {
         _entries = entries;
         _currentPath = path;
+        if (!_editingPath) {
+          _pathController.text = path;
+        }
         _selectedPaths.clear();
         _lastSelectedIndex = null;
         _loading = false;
@@ -154,6 +173,19 @@ class _SftpPanelState extends State<SftpPanel> {
       return '/';
     }
     return trimmed.substring(0, index);
+  }
+
+  List<String> _pathSuggestions(String path) {
+    if (path.isEmpty) {
+      return const ['/'];
+    }
+    final current = path.endsWith('/') && path.length > 1
+        ? path.substring(0, path.length - 1)
+        : path;
+    final parent = _parentPath(current);
+    final grand = parent == '/' ? '/' : _parentPath(parent);
+    final suggestions = <String>{current, parent, grand};
+    return suggestions.toList();
   }
 
   String _joinRemote(String base, String name) {
@@ -578,12 +610,69 @@ class _SftpPanelState extends State<SftpPanel> {
                 const SizedBox(height: 4),
                 LinearProgressIndicator(value: _transferProgress),
               ],
-              Text(
-                path,
-                style: Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.copyWith(color: Colors.grey.shade600),
+              RawAutocomplete<String>(
+                textEditingController: _pathController,
+                focusNode: _pathFocusNode,
+                optionsBuilder: (value) {
+                  final input = value.text.trim();
+                  final base = input.isEmpty ? path : input;
+                  return _pathSuggestions(base);
+                },
+                displayStringForOption: (option) => option,
+                fieldViewBuilder:
+                    (context, controller, focusNode, onFieldSubmitted) {
+                  return TextField(
+                    controller: controller,
+                    focusNode: focusNode,
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(color: Colors.grey.shade700),
+                    decoration: const InputDecoration(
+                      isDense: true,
+                      border: OutlineInputBorder(),
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    ),
+                    onTap: () => setState(() => _editingPath = true),
+                    onSubmitted: (value) {
+                      final next = value.trim();
+                      setState(() => _editingPath = false);
+                      if (next.isNotEmpty) {
+                        _loadDirectory(next);
+                      }
+                    },
+                  );
+                },
+                optionsViewBuilder:
+                    (context, onSelected, Iterable<String> options) {
+                  return Align(
+                    alignment: Alignment.topLeft,
+                    child: Material(
+                      elevation: 4,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 260),
+                        child: ListView.builder(
+                          padding: EdgeInsets.zero,
+                          shrinkWrap: true,
+                          itemCount: options.length,
+                          itemBuilder: (context, index) {
+                            final option = options.elementAt(index);
+                            return ListTile(
+                              dense: true,
+                              title: Text(option),
+                              onTap: () => onSelected(option),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  );
+                },
+                onSelected: (value) {
+                  setState(() => _editingPath = false);
+                  _loadDirectory(value);
+                },
               ),
               const SizedBox(height: 6),
               DropTarget(
