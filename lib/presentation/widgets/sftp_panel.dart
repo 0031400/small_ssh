@@ -257,6 +257,70 @@ class _SftpPanelState extends State<SftpPanel> {
     }
   }
 
+  Future<void> _createFolder() async {
+    final sessionId = _sessionId;
+    final current = _currentPath;
+    if (sessionId == null || current == null) {
+      return;
+    }
+    final name = await _promptForText(
+      title: 'New Folder',
+      hint: 'folder-name',
+      actionLabel: 'Create',
+    );
+    if (name == null || name.trim().isEmpty) {
+      return;
+    }
+    final remotePath = _joinRemote(current, name.trim());
+    try {
+      await widget.orchestrator.createSftpDirectory(
+        sessionId: sessionId,
+        path: remotePath,
+      );
+      if (!mounted) return;
+      await _refresh();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Folder created.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Create folder failed: $error')),
+      );
+    }
+  }
+
+  Future<void> _deleteSelected() async {
+    final sessionId = _sessionId;
+    final selected = _selected;
+    if (sessionId == null || selected == null) {
+      return;
+    }
+    final confirmed = await _confirmDelete(
+      '${selected.isDirectory ? 'Folder' : 'File'} "${selected.name}"?',
+    );
+    if (confirmed != true) {
+      return;
+    }
+    try {
+      await widget.orchestrator.deleteSftpEntry(
+        sessionId: sessionId,
+        path: selected.path,
+        isDirectory: selected.isDirectory,
+      );
+      if (!mounted) return;
+      await _refresh();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Deleted.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Delete failed: $error')),
+      );
+    }
+  }
+
   String _basename(String path) {
     final normalized = path.replaceAll('\\', '/');
     final index = normalized.lastIndexOf('/');
@@ -300,6 +364,62 @@ class _SftpPanelState extends State<SftpPanel> {
     );
   }
 
+  Future<String?> _promptForText({
+    required String title,
+    required String hint,
+    required String actionLabel,
+  }) async {
+    final controller = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(title),
+          content: TextField(
+            controller: controller,
+            decoration: InputDecoration(
+              labelText: 'Name',
+              hintText: hint,
+            ),
+            autofocus: true,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(controller.text),
+              child: Text(actionLabel),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<bool?> _confirmDelete(String message) async {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Delete'),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final session = widget.orchestrator.activeSession;
@@ -330,6 +450,23 @@ class _SftpPanelState extends State<SftpPanel> {
                   const SizedBox(width: 6),
                   Text('SFTP', style: Theme.of(context).textTheme.titleSmall),
                   const Spacer(),
+                  IconButton(
+                    tooltip: 'New Folder',
+                    visualDensity: VisualDensity.compact,
+                    onPressed:
+                        !isConnected || _loading ? null : _createFolder,
+                    icon: const Icon(Icons.create_new_folder_outlined, size: 18),
+                  ),
+                  IconButton(
+                    tooltip: 'Delete',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: !isConnected ||
+                            _loading ||
+                            _selected == null
+                        ? null
+                        : _deleteSelected,
+                    icon: const Icon(Icons.delete_outline, size: 18),
+                  ),
                   IconButton(
                     tooltip: 'Up',
                     visualDensity: VisualDensity.compact,

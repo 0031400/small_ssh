@@ -468,6 +468,32 @@ class SessionOrchestrator extends ChangeNotifier {
     return managed.connection!.listSftpDirectory(path);
   }
 
+  Future<void> createSftpDirectory({
+    required String sessionId,
+    required String path,
+  }) async {
+    final managed = _sessions[sessionId];
+    if (managed == null || managed.connection == null) {
+      return;
+    }
+    await managed.connection!.createSftpDirectory(path);
+  }
+
+  Future<void> deleteSftpEntry({
+    required String sessionId,
+    required String path,
+    required bool isDirectory,
+  }) async {
+    final managed = _sessions[sessionId];
+    if (managed == null || managed.connection == null) {
+      return;
+    }
+    await managed.connection!.deleteSftpEntry(
+      path: path,
+      isDirectory: isDirectory,
+    );
+  }
+
   Future<void> downloadSftpFile({
     required String sessionId,
     required String remotePath,

@@ -184,6 +184,25 @@ class _DartSsh2Connection implements SshConnection {
   }
 
   @override
+  Future<void> createSftpDirectory(String path) async {
+    final sftp = await _openSftp();
+    await sftp.mkdir(path);
+  }
+
+  @override
+  Future<void> deleteSftpEntry({
+    required String path,
+    required bool isDirectory,
+  }) async {
+    final sftp = await _openSftp();
+    if (isDirectory) {
+      await sftp.rmdir(path);
+    } else {
+      await sftp.remove(path);
+    }
+  }
+
+  @override
   Future<void> downloadSftpFile({
     required String remotePath,
     required String localPath,

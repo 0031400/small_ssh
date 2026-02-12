@@ -128,6 +128,19 @@ class _MockSshConnection implements SshConnection {
   }
 
   @override
+  Future<void> createSftpDirectory(String path) async {
+    throw UnsupportedError('Mock SFTP create directory not implemented');
+  }
+
+  @override
+  Future<void> deleteSftpEntry({
+    required String path,
+    required bool isDirectory,
+  }) async {
+    throw UnsupportedError('Mock SFTP delete not implemented');
+  }
+
+  @override
   Future<void> downloadSftpFile({
     required String remotePath,
     required String localPath,

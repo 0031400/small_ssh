@@ -37,6 +37,11 @@ abstract class SshConnection {
   });
   Future<String> resolveSftpHome();
   Future<List<SftpEntry>> listSftpDirectory(String path);
+  Future<void> createSftpDirectory(String path);
+  Future<void> deleteSftpEntry({
+    required String path,
+    required bool isDirectory,
+  });
   Future<void> downloadSftpFile({
     required String remotePath,
     required String localPath,
