@@ -167,7 +167,7 @@ class _HostFormDialogState extends State<HostFormDialog> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<PrivateKeyMode>(
-                  value: _privateKeyMode,
+                  initialValue: _privateKeyMode,
                   decoration: const InputDecoration(
                     labelText: 'Private Key',
                   ),
@@ -217,7 +217,7 @@ class _HostFormDialogState extends State<HostFormDialog> {
                 ],
                 const SizedBox(height: 12),
                 DropdownButtonFormField<AuthOrderMode>(
-                  value: _authOrderMode,
+                  initialValue: _authOrderMode,
                   decoration: const InputDecoration(
                     labelText: 'Auth Order',
                   ),

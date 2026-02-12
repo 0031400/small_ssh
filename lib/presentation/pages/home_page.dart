@@ -135,6 +135,9 @@ class _HomePageState extends State<HomePage> {
       host.id,
       authOrder: authOrder,
     );
+    if (!mounted) {
+      return;
+    }
     String? override;
     if (needsPassword) {
       final entered = await showDialog<String>(

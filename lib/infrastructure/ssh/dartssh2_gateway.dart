@@ -223,7 +223,7 @@ class _DartSsh2Connection implements SshConnection {
     }
     var cancelled = false;
     var cancelSignaled = false;
-    StreamSubscription<Uint8List>? sub;
+    late final StreamSubscription<Uint8List> sub;
     final done = Completer<void>();
     final cancelSignal = Completer<void>();
     sub = file.read(
@@ -268,7 +268,7 @@ class _DartSsh2Connection implements SshConnection {
       await Future.any([done.future, cancelSignal.future]);
     } finally {
       if (!cancelled) {
-        await sub?.cancel();
+        await sub.cancel();
         await sink.close();
         await file.close();
       }
@@ -277,7 +277,7 @@ class _DartSsh2Connection implements SshConnection {
       done.future
           .catchError((_) {})
           .whenComplete(() async {
-            await sub?.cancel();
+            await sub.cancel();
             await sink.close();
             await file.close();
             if (await localFile.exists()) {

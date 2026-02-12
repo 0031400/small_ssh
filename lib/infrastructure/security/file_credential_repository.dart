@@ -63,8 +63,9 @@ class FileCredentialRepository implements CredentialRepository {
   }
 
   File get _storageFile {
-    if (_filePath != null && _filePath!.isNotEmpty) {
-      return File(_filePath!);
+    final path = _filePath;
+    if (path != null && path.isNotEmpty) {
+      return File(path);
     }
     final executableDir = File(Platform.resolvedExecutable).parent.path;
     final separator = Platform.pathSeparator;

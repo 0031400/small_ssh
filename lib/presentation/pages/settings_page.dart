@@ -182,27 +182,27 @@ class _SettingsPageState extends State<SettingsPage> {
                       title: Text('复制/粘贴'),
                       subtitle: Text('右键行为'),
                     ),
-                    RadioListTile<ClipboardBehavior>(
-                      value: ClipboardBehavior.contextMenu,
+                    RadioGroup<ClipboardBehavior>(
                       groupValue: widget.settings.clipboardBehavior,
                       onChanged: (value) {
                         if (value != null) {
                           widget.settings.setClipboardBehavior(value);
                         }
                       },
-                      title: const Text('弹出菜单'),
-                      subtitle: const Text('右键显示复制/粘贴菜单'),
-                    ),
-                    RadioListTile<ClipboardBehavior>(
-                      value: ClipboardBehavior.direct,
-                      groupValue: widget.settings.clipboardBehavior,
-                      onChanged: (value) {
-                        if (value != null) {
-                          widget.settings.setClipboardBehavior(value);
-                        }
-                      },
-                      title: const Text('直接复制/粘贴'),
-                      subtitle: const Text('有选中则复制，无选中则粘贴'),
+                      child: Column(
+                        children: const [
+                          RadioListTile<ClipboardBehavior>(
+                            value: ClipboardBehavior.contextMenu,
+                            title: Text('弹出菜单'),
+                            subtitle: Text('右键显示复制/粘贴菜单'),
+                          ),
+                          RadioListTile<ClipboardBehavior>(
+                            value: ClipboardBehavior.direct,
+                            title: Text('直接复制/粘贴'),
+                            subtitle: Text('有选中则复制，无选中则粘贴'),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),

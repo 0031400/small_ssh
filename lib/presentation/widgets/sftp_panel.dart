@@ -276,6 +276,9 @@ class _SftpPanelState extends State<SftpPanel> {
       dialogTitle: 'Select file to upload',
       allowMultiple: false,
     );
+    if (!mounted) {
+      return;
+    }
     final localPath = picked?.files.single.path;
     if (localPath == null || localPath.trim().isEmpty) {
       return;
@@ -296,6 +299,7 @@ class _SftpPanelState extends State<SftpPanel> {
       if (!mounted) return;
       _finishTransfer();
       await _refresh();
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Upload completed.')));
@@ -339,6 +343,7 @@ class _SftpPanelState extends State<SftpPanel> {
       if (!mounted) return;
       _finishTransfer();
       await _refresh();
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Upload completed.')));
@@ -373,6 +378,7 @@ class _SftpPanelState extends State<SftpPanel> {
       );
       if (!mounted) return;
       await _refresh();
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Folder created.')));
@@ -414,6 +420,7 @@ class _SftpPanelState extends State<SftpPanel> {
       }
       if (!mounted) return;
       await _refresh();
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Deleted.')));
