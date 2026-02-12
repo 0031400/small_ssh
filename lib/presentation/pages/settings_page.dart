@@ -236,10 +236,12 @@ class _SettingsPageState extends State<SettingsPage> {
                         controller: _globalKeyController,
                         decoration: const InputDecoration(
                           labelText: 'Private Key',
-                          alignLabelWithHint: true,
                         ),
-                        minLines: 4,
-                        maxLines: 8,
+                        obscureText: true,
+                        keyboardType: TextInputType.visiblePassword,
+                        enableSuggestions: false,
+                        autocorrect: false,
+                        maxLines: 1,
                         enabled: !_loadingKey && !_savingKey,
                       ),
                       TextFormField(

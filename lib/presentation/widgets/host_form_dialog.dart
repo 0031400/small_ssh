@@ -155,10 +155,12 @@ class _HostFormDialogState extends State<HostFormDialog> {
                   controller: _privateKeyController,
                   decoration: const InputDecoration(
                     labelText: 'Private Key (optional, leave blank to keep)',
-                    alignLabelWithHint: true,
                   ),
-                  minLines: 3,
-                  maxLines: 6,
+                  obscureText: true,
+                  keyboardType: TextInputType.visiblePassword,
+                  enableSuggestions: false,
+                  autocorrect: false,
+                  maxLines: 1,
                 ),
                 TextFormField(
                   controller: _privateKeyPassphraseController,
