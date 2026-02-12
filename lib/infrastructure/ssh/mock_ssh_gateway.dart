@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:small_ssh/domain/models/sftp_entry.dart';
 import 'package:small_ssh/infrastructure/ssh/ssh_gateway.dart';
 
 class MockSshGateway implements SshGateway {
@@ -112,6 +113,35 @@ class _MockSshConnection implements SshConnection {
     int pixelWidth = 0,
     int pixelHeight = 0,
   }) async {}
+
+  @override
+  Future<String> resolveSftpHome() async {
+    return '/';
+  }
+
+  @override
+  Future<List<SftpEntry>> listSftpDirectory(String path) async {
+    return <SftpEntry>[
+      SftpEntry(name: 'mock.txt', path: '/mock.txt', isDirectory: false),
+      SftpEntry(name: 'demo', path: '/demo', isDirectory: true),
+    ];
+  }
+
+  @override
+  Future<void> downloadSftpFile({
+    required String remotePath,
+    required String localPath,
+  }) async {
+    throw UnsupportedError('Mock SFTP download not implemented');
+  }
+
+  @override
+  Future<void> uploadSftpFile({
+    required String localPath,
+    required String remotePath,
+  }) async {
+    throw UnsupportedError('Mock SFTP upload not implemented');
+  }
 
   void _emit(String line) {
     if (!_outputController.isClosed) {

@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:dartssh2/dartssh2.dart';
 import 'package:small_ssh/domain/models/auth_method.dart';
+import 'package:small_ssh/domain/models/sftp_entry.dart';
 import 'package:small_ssh/infrastructure/ssh/ssh_gateway.dart';
 
 class DartSsh2Gateway implements SshGateway {
@@ -93,6 +95,8 @@ class _DartSsh2Connection implements SshConnection {
 
   final SSHClient _client;
   final SSHSession _shell;
+  SftpClient? _sftpClient;
+  Future<SftpClient>? _sftpOpening;
 
   final StreamController<String> _outputController =
       StreamController<String>.broadcast();
@@ -116,6 +120,7 @@ class _DartSsh2Connection implements SshConnection {
   Future<void> disconnect() async {
     await _stdoutSub?.cancel();
     await _stderrSub?.cancel();
+    _sftpClient?.close();
     _shell.close();
     _client.close();
     _closeOutput();
@@ -144,4 +149,100 @@ class _DartSsh2Connection implements SshConnection {
     _shell.resizeTerminal(width, height, pixelWidth, pixelHeight);
   }
 
+  @override
+  Future<String> resolveSftpHome() async {
+    final sftp = await _openSftp();
+    return sftp.absolute('.');
+  }
+
+  @override
+  Future<List<SftpEntry>> listSftpDirectory(String path) async {
+    final sftp = await _openSftp();
+    final entries = await sftp.listdir(path);
+    final normalized = path.isEmpty ? '/' : path;
+    final results = <SftpEntry>[];
+    for (final entry in entries) {
+      if (entry.filename == '.' || entry.filename == '..') {
+        continue;
+      }
+      results.add(
+        SftpEntry(
+          name: entry.filename,
+          path: _joinRemote(normalized, entry.filename),
+          isDirectory: entry.attr.isDirectory,
+          size: entry.attr.size,
+        ),
+      );
+    }
+    results.sort((a, b) {
+      if (a.isDirectory != b.isDirectory) {
+        return a.isDirectory ? -1 : 1;
+      }
+      return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+    });
+    return results;
+  }
+
+  @override
+  Future<void> downloadSftpFile({
+    required String remotePath,
+    required String localPath,
+  }) async {
+    final sftp = await _openSftp();
+    final file = await sftp.open(remotePath, mode: SftpFileOpenMode.read);
+    final bytes = await file.readBytes();
+    await file.close();
+    final localFile = File(localPath);
+    await localFile.parent.create(recursive: true);
+    await localFile.writeAsBytes(bytes, flush: true);
+  }
+
+  @override
+  Future<void> uploadSftpFile({
+    required String localPath,
+    required String remotePath,
+  }) async {
+    final localFile = File(localPath);
+    if (!await localFile.exists()) {
+      throw StateError('Local file not found: $localPath');
+    }
+    final sftp = await _openSftp();
+    final file = await sftp.open(
+      remotePath,
+      mode: SftpFileOpenMode.write |
+          SftpFileOpenMode.create |
+          SftpFileOpenMode.truncate,
+    );
+    final writer = file.write(
+      localFile.openRead().map((chunk) => Uint8List.fromList(chunk)),
+    );
+    await writer.done;
+    await file.close();
+  }
+
+  Future<SftpClient> _openSftp() {
+    if (_sftpClient != null) {
+      return Future<SftpClient>.value(_sftpClient);
+    }
+    final pending = _sftpOpening;
+    if (pending != null) {
+      return pending;
+    }
+    final opening = _client.sftp().then((client) {
+      _sftpClient = client;
+      return client;
+    });
+    _sftpOpening = opening;
+    return opening;
+  }
+
+  String _joinRemote(String base, String name) {
+    if (base.isEmpty || base == '/') {
+      return '/$name';
+    }
+    if (base.endsWith('/')) {
+      return '$base$name';
+    }
+    return '$base/$name';
+  }
 }

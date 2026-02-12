@@ -7,6 +7,7 @@ import 'package:small_ssh/domain/models/auth_method.dart';
 import 'package:small_ssh/domain/models/connection_state_status.dart';
 import 'package:small_ssh/domain/models/credential_ref.dart';
 import 'package:small_ssh/domain/models/host_profile.dart';
+import 'package:small_ssh/domain/models/sftp_entry.dart';
 import 'package:small_ssh/domain/models/ssh_session.dart';
 import 'package:small_ssh/domain/repositories/credential_repository.dart';
 import 'package:small_ssh/domain/repositories/host_profile_repository.dart';
@@ -445,6 +446,55 @@ class SessionOrchestrator extends ChangeNotifier {
       height,
       pixelWidth: pixelWidth,
       pixelHeight: pixelHeight,
+    );
+  }
+
+  Future<String?> resolveSftpHome(String sessionId) async {
+    final managed = _sessions[sessionId];
+    if (managed == null || managed.connection == null) {
+      return null;
+    }
+    return managed.connection!.resolveSftpHome();
+  }
+
+  Future<List<SftpEntry>> listSftpDirectory(
+    String sessionId,
+    String path,
+  ) async {
+    final managed = _sessions[sessionId];
+    if (managed == null || managed.connection == null) {
+      return <SftpEntry>[];
+    }
+    return managed.connection!.listSftpDirectory(path);
+  }
+
+  Future<void> downloadSftpFile({
+    required String sessionId,
+    required String remotePath,
+    required String localPath,
+  }) async {
+    final managed = _sessions[sessionId];
+    if (managed == null || managed.connection == null) {
+      return;
+    }
+    await managed.connection!.downloadSftpFile(
+      remotePath: remotePath,
+      localPath: localPath,
+    );
+  }
+
+  Future<void> uploadSftpFile({
+    required String sessionId,
+    required String localPath,
+    required String remotePath,
+  }) async {
+    final managed = _sessions[sessionId];
+    if (managed == null || managed.connection == null) {
+      return;
+    }
+    await managed.connection!.uploadSftpFile(
+      localPath: localPath,
+      remotePath: remotePath,
     );
   }
 

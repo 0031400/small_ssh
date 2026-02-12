@@ -7,6 +7,7 @@ import 'package:small_ssh/domain/models/host_profile.dart';
 import 'package:small_ssh/domain/repositories/credential_repository.dart';
 import 'package:small_ssh/presentation/widgets/host_form_dialog.dart';
 import 'package:small_ssh/presentation/widgets/password_prompt_dialog.dart';
+import 'package:small_ssh/presentation/widgets/sftp_panel.dart';
 import 'package:small_ssh/presentation/widgets/terminal_panel.dart';
 import 'package:small_ssh/presentation/pages/settings_page.dart';
 
@@ -193,16 +194,33 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: Card(
-                    child: TerminalPanel(
-                      sessions: widget.orchestrator.sessions,
-                      activeSessionId: widget.orchestrator.activeSessionId,
-                      onSelectSession: widget.orchestrator.setActiveSession,
-                      onDeleteSession: widget.orchestrator.removeSession,
-                      onSendInput: widget.orchestrator.sendInput,
-                      onResizeTerminal: widget.orchestrator.resizeTerminal,
-                      settings: widget.settings,
-                    ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Card(
+                          child: TerminalPanel(
+                            sessions: widget.orchestrator.sessions,
+                            activeSessionId: widget.orchestrator.activeSessionId,
+                            onSelectSession: widget.orchestrator.setActiveSession,
+                            onDeleteSession: widget.orchestrator.removeSession,
+                            onSendInput: widget.orchestrator.sendInput,
+                            onResizeTerminal: widget.orchestrator.resizeTerminal,
+                            settings: widget.settings,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      SizedBox(
+                        width: 280,
+                        child: Card(
+                          child: SftpPanel(
+                            orchestrator: widget.orchestrator,
+                            activeSessionId:
+                                widget.orchestrator.activeSessionId,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],

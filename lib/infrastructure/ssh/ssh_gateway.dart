@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:small_ssh/domain/models/auth_method.dart';
+import 'package:small_ssh/domain/models/sftp_entry.dart';
 
 class SshConnectRequest {
   const SshConnectRequest({
@@ -33,6 +34,16 @@ abstract class SshConnection {
     int height, {
     int pixelWidth = 0,
     int pixelHeight = 0,
+  });
+  Future<String> resolveSftpHome();
+  Future<List<SftpEntry>> listSftpDirectory(String path);
+  Future<void> downloadSftpFile({
+    required String remotePath,
+    required String localPath,
+  });
+  Future<void> uploadSftpFile({
+    required String localPath,
+    required String remotePath,
   });
   Future<void> disconnect();
 }
