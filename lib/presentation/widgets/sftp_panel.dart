@@ -26,7 +26,7 @@ class _SftpPanelState extends State<SftpPanel> {
   List<SftpEntry> _entries = <SftpEntry>[];
   bool _loading = false;
   String? _error;
-  SftpEntry? _selected;
+  final Set<String> _selectedPaths = <String>{};
   bool _available = true;
   bool _dragging = false;
 
@@ -46,7 +46,7 @@ class _SftpPanelState extends State<SftpPanel> {
 
   void _handleSessionChange() {
     _sessionId = widget.activeSessionId;
-    _selected = null;
+    _selectedPaths.clear();
     _entries = <SftpEntry>[];
     _currentPath = null;
     _error = null;
@@ -111,7 +111,7 @@ class _SftpPanelState extends State<SftpPanel> {
       setState(() {
         _entries = entries;
         _currentPath = path;
-        _selected = null;
+        _selectedPaths.clear();
         _loading = false;
         _available = true;
       });
@@ -159,8 +159,21 @@ class _SftpPanelState extends State<SftpPanel> {
 
   Future<void> _downloadSelected() async {
     final sessionId = _sessionId;
-    final selected = _selected;
-    if (sessionId == null || selected == null || selected.isDirectory) {
+    if (sessionId == null) {
+      return;
+    }
+    if (_selectedPaths.length != 1) {
+      return;
+    }
+    final selected = _entries.firstWhere(
+      (entry) => entry.path == _selectedPaths.first,
+      orElse: () => const SftpEntry(
+        name: '',
+        path: '',
+        isDirectory: true,
+      ),
+    );
+    if (selected.path.isEmpty || selected.isDirectory) {
       return;
     }
     final localPath = await _promptForPath(
@@ -292,22 +305,34 @@ class _SftpPanelState extends State<SftpPanel> {
 
   Future<void> _deleteSelected() async {
     final sessionId = _sessionId;
-    final selected = _selected;
-    if (sessionId == null || selected == null) {
+    if (sessionId == null || _selectedPaths.isEmpty) {
       return;
     }
-    final confirmed = await _confirmDelete(
-      '${selected.isDirectory ? 'Folder' : 'File'} "${selected.name}"?',
-    );
+    final confirmed = await _confirmDelete(_selectedPaths.length == 1
+        ? 'Delete selected item?'
+        : 'Delete ${_selectedPaths.length} items?');
     if (confirmed != true) {
       return;
     }
     try {
-      await widget.orchestrator.deleteSftpEntry(
-        sessionId: sessionId,
-        path: selected.path,
-        isDirectory: selected.isDirectory,
-      );
+      for (final path in _selectedPaths) {
+        final entry = _entries.firstWhere(
+          (item) => item.path == path,
+          orElse: () => const SftpEntry(
+            name: '',
+            path: '',
+            isDirectory: false,
+          ),
+        );
+        if (entry.path.isEmpty) {
+          continue;
+        }
+        await widget.orchestrator.deleteSftpEntry(
+          sessionId: sessionId,
+          path: entry.path,
+          isDirectory: entry.isDirectory,
+        );
+      }
       if (!mounted) return;
       await _refresh();
       ScaffoldMessenger.of(context).showSnackBar(
@@ -462,7 +487,7 @@ class _SftpPanelState extends State<SftpPanel> {
                     visualDensity: VisualDensity.compact,
                     onPressed: !isConnected ||
                             _loading ||
-                            _selected == null
+                            _selectedPaths.isEmpty
                         ? null
                         : _deleteSelected,
                     icon: const Icon(Icons.delete_outline, size: 18),
@@ -531,8 +556,7 @@ class _SftpPanelState extends State<SftpPanel> {
                     child: OutlinedButton.icon(
                       onPressed: !isConnected ||
                               _loading ||
-                              _selected == null ||
-                              _selected!.isDirectory
+                              _selectedPaths.length != 1
                           ? null
                           : _downloadSelected,
                       icon: const Icon(Icons.copy, size: 18),
@@ -585,7 +609,7 @@ class _SftpPanelState extends State<SftpPanel> {
       separatorBuilder: (context, index) => const SizedBox(height: 2),
       itemBuilder: (context, index) {
         final entry = _entries[index];
-        final isSelected = _selected?.path == entry.path;
+        final isSelected = _selectedPaths.contains(entry.path);
         return ListTile(
           dense: true,
           visualDensity: VisualDensity.compact,
@@ -602,13 +626,26 @@ class _SftpPanelState extends State<SftpPanel> {
           subtitle: entry.isDirectory
               ? const Text('Folder')
               : Text(_formatSize(entry.size)),
+          trailing: entry.isDirectory
+              ? IconButton(
+                  tooltip: 'Open',
+                  visualDensity: VisualDensity.compact,
+                  icon: const Icon(Icons.arrow_forward_ios, size: 14),
+                  onPressed: () => _loadDirectory(entry.path),
+                )
+              : null,
           onTap: () {
-            if (entry.isDirectory) {
-              _loadDirectory(entry.path);
-            } else {
-              setState(() => _selected = entry);
-            }
+            setState(() {
+              if (_selectedPaths.contains(entry.path)) {
+                _selectedPaths.remove(entry.path);
+              } else {
+                _selectedPaths.add(entry.path);
+              }
+            });
           },
+          onLongPress: entry.isDirectory
+              ? () => _loadDirectory(entry.path)
+              : null,
         );
       },
     );
