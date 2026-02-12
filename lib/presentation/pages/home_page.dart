@@ -3,6 +3,7 @@ import 'package:small_ssh/application/services/session_orchestrator.dart';
 import 'package:small_ssh/domain/models/connection_state_status.dart';
 import 'package:small_ssh/domain/models/host_profile.dart';
 import 'package:small_ssh/presentation/widgets/host_form_dialog.dart';
+import 'package:small_ssh/presentation/widgets/password_prompt_dialog.dart';
 import 'package:small_ssh/presentation/widgets/terminal_panel.dart';
 
 class HomePage extends StatefulWidget {
@@ -94,6 +95,26 @@ class _HomePageState extends State<HomePage> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
   }
 
+  Future<void> _connectToHost(HostProfile host) async {
+    final hasPassword = await widget.orchestrator.hasPasswordForHost(host.id);
+    String? override;
+    if (!hasPassword) {
+      final entered = await showDialog<String>(
+        context: context,
+        builder: (context) => PasswordPromptDialog(host: host),
+      );
+      if (!mounted || entered == null || entered.trim().isEmpty) {
+        return;
+      }
+      override = entered;
+    }
+
+    await widget.orchestrator.connectToHost(
+      host.id,
+      passwordOverride: override,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -108,7 +129,7 @@ class _HomePageState extends State<HomePage> {
                 child: _HostListPanel(
                   loading: widget.orchestrator.loadingHosts,
                   hosts: widget.orchestrator.hosts,
-                  onConnect: widget.orchestrator.connectToHost,
+                  onConnect: _connectToHost,
                   onAddHost: _openHostDialog,
                   onEditHost: _openEditHostDialog,
                   onDeleteHost: _confirmDeleteHost,
@@ -145,7 +166,7 @@ class _HostListPanel extends StatelessWidget {
 
   final bool loading;
   final List<HostProfile> hosts;
-  final Future<void> Function(String hostId) onConnect;
+  final Future<void> Function(HostProfile host) onConnect;
   final Future<void> Function() onAddHost;
   final Future<void> Function(HostProfile host) onEditHost;
   final Future<void> Function(HostProfile host) onDeleteHost;
@@ -195,7 +216,7 @@ class _HostListPanel extends StatelessWidget {
                           children: [
                             Expanded(
                               child: FilledButton(
-                                onPressed: () => onConnect(host.id),
+                                onPressed: () => onConnect(host),
                                 child: const Text('Connect'),
                               ),
                             ),

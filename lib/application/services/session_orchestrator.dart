@@ -96,7 +96,19 @@ class SessionOrchestrator extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> connectToHost(String hostId) async {
+  Future<bool> hasPasswordForHost(String hostId) async {
+    final credential = CredentialRef(
+      id: '$hostId-password',
+      kind: CredentialKind.password,
+    );
+    final secret = await _credentialRepository.readSecret(credential);
+    return secret != null && secret.trim().isNotEmpty;
+  }
+
+  Future<void> connectToHost(
+    String hostId, {
+    String? passwordOverride,
+  }) async {
     final input = _connectToHostUseCase.buildInput(hostId);
     final host = await _hostRepository.findById(input.hostId);
 
@@ -126,8 +138,15 @@ class SessionOrchestrator extends ChangeNotifier {
         id: '${host.id}-password',
         kind: CredentialKind.password,
       );
+      final storedPassword = await _credentialRepository.readSecret(credential);
+      final override = passwordOverride?.trim();
       final password =
-          await _credentialRepository.readSecret(credential) ?? 'changeme';
+          (override != null && override.isNotEmpty)
+              ? override
+              : storedPassword?.trim();
+      if (password == null || password.isEmpty) {
+        throw StateError('Password is required to connect.');
+      }
 
       final connection = await _sshGateway.connect(
         SshConnectRequest(
@@ -137,6 +156,12 @@ class SessionOrchestrator extends ChangeNotifier {
           password: password,
         ),
       );
+
+      if ((storedPassword == null || storedPassword.trim().isEmpty) &&
+          override != null &&
+          override.isNotEmpty) {
+        await _credentialRepository.writeSecret(credential, override);
+      }
 
       final connectedSession = SshSession(
         id: connection.id,
