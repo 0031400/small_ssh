@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:small_ssh/domain/models/auth_method.dart';
+
 class SshConnectRequest {
   const SshConnectRequest({
     required this.host,
@@ -8,6 +10,8 @@ class SshConnectRequest {
     this.password,
     this.privateKey,
     this.privateKeyPassphrase,
+    this.authMethod = AuthMethod.password,
+    this.keyboardInteractivePassword,
   });
 
   final String host;
@@ -16,6 +20,8 @@ class SshConnectRequest {
   final String? password;
   final String? privateKey;
   final String? privateKeyPassphrase;
+  final AuthMethod authMethod;
+  final String? keyboardInteractivePassword;
 }
 
 abstract class SshConnection {

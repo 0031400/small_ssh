@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:small_ssh/domain/models/auth_method.dart';
 import 'package:small_ssh/domain/models/host_profile.dart';
+import 'package:small_ssh/presentation/widgets/auth_order_editor.dart';
 
 class HostFormResult {
   const HostFormResult({
@@ -11,6 +13,8 @@ class HostFormResult {
     required this.privateKeyMode,
     required this.privateKey,
     required this.privateKeyPassphrase,
+    required this.authOrderMode,
+    required this.authOrder,
   });
 
   final String name;
@@ -21,6 +25,8 @@ class HostFormResult {
   final PrivateKeyMode privateKeyMode;
   final String privateKey;
   final String privateKeyPassphrase;
+  final AuthOrderMode authOrderMode;
+  final List<AuthMethod> authOrder;
 }
 
 class HostFormDialog extends StatefulWidget {
@@ -42,6 +48,8 @@ class _HostFormDialogState extends State<HostFormDialog> {
   late final TextEditingController _privateKeyController;
   late final TextEditingController _privateKeyPassphraseController;
   late PrivateKeyMode _privateKeyMode;
+  late AuthOrderMode _authOrderMode;
+  late List<AuthMethod> _authOrder;
 
   bool get _isEditing => widget.initialHost != null;
 
@@ -57,6 +65,10 @@ class _HostFormDialogState extends State<HostFormDialog> {
     _privateKeyController = TextEditingController();
     _privateKeyPassphraseController = TextEditingController();
     _privateKeyMode = initial?.privateKeyMode ?? PrivateKeyMode.global;
+    _authOrderMode = initial?.authOrderMode ?? AuthOrderMode.global;
+    _authOrder = List<AuthMethod>.of(
+      initial?.authOrder ?? defaultAuthOrder,
+    );
   }
 
   @override
@@ -157,6 +169,37 @@ class _HostFormDialogState extends State<HostFormDialog> {
                   obscureText: true,
                 ),
               ],
+              const SizedBox(height: 12),
+              DropdownButtonFormField<AuthOrderMode>(
+                value: _authOrderMode,
+                decoration: const InputDecoration(
+                  labelText: 'Auth Order',
+                ),
+                items: const [
+                  DropdownMenuItem(
+                    value: AuthOrderMode.global,
+                    child: Text('Use global auth order'),
+                  ),
+                  DropdownMenuItem(
+                    value: AuthOrderMode.host,
+                    child: Text('Use host-specific auth order'),
+                  ),
+                ],
+                onChanged: (value) {
+                  if (value == null) {
+                    return;
+                  }
+                  setState(() => _authOrderMode = value);
+                },
+              ),
+              if (_authOrderMode == AuthOrderMode.host) ...[
+                const SizedBox(height: 8),
+                AuthOrderEditor(
+                  order: _authOrder,
+                  onChanged: (next) => setState(() => _authOrder = next),
+                  height: 180,
+                ),
+              ],
             ],
           ),
         ),
@@ -210,6 +253,8 @@ class _HostFormDialogState extends State<HostFormDialog> {
         privateKeyMode: _privateKeyMode,
         privateKey: _privateKeyController.text,
         privateKeyPassphrase: _privateKeyPassphraseController.text,
+        authOrderMode: _authOrderMode,
+        authOrder: _authOrder,
       ),
     );
   }

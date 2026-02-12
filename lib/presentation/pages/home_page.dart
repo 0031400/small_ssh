@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:small_ssh/app/settings.dart';
 import 'package:small_ssh/application/services/session_orchestrator.dart';
+import 'package:small_ssh/domain/models/auth_method.dart';
 import 'package:small_ssh/domain/models/connection_state_status.dart';
 import 'package:small_ssh/domain/models/host_profile.dart';
 import 'package:small_ssh/domain/repositories/credential_repository.dart';
@@ -45,6 +46,8 @@ class _HomePageState extends State<HomePage> {
       privateKeyMode: result.privateKeyMode,
       privateKey: result.privateKey,
       privateKeyPassphrase: result.privateKeyPassphrase,
+      authOrderMode: result.authOrderMode,
+      authOrder: result.authOrder,
     );
 
     if (!mounted || error == null) {
@@ -102,6 +105,8 @@ class _HomePageState extends State<HomePage> {
       privateKeyMode: result.privateKeyMode,
       privateKey: result.privateKey,
       privateKeyPassphrase: result.privateKeyPassphrase,
+      authOrderMode: result.authOrderMode,
+      authOrder: result.authOrder,
     );
 
     if (!mounted || error == null) {
@@ -112,8 +117,10 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _connectToHost(HostProfile host) async {
+    final authOrder = _resolveAuthOrder(host);
     final needsPassword = await widget.orchestrator.needsPasswordForHost(
       host.id,
+      authOrder: authOrder,
     );
     String? override;
     if (needsPassword) {
@@ -130,7 +137,14 @@ class _HomePageState extends State<HomePage> {
     await widget.orchestrator.connectToHost(
       host.id,
       passwordOverride: override,
+      authOrder: authOrder,
     );
+  }
+
+  List<AuthMethod> _resolveAuthOrder(HostProfile host) {
+    return host.authOrderMode == AuthOrderMode.host
+        ? host.authOrder
+        : widget.settings.authOrder;
   }
 
   void _openSettings() {

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dartssh2/dartssh2.dart';
+import 'package:small_ssh/domain/models/auth_method.dart';
 import 'package:small_ssh/infrastructure/ssh/ssh_gateway.dart';
 
 class DartSsh2Gateway implements SshGateway {
@@ -14,24 +15,41 @@ class DartSsh2Gateway implements SshGateway {
 
     List<SSHKeyPair>? identities;
     final privateKey = _normalizePem(request.privateKey);
-    if (privateKey != null && privateKey.isNotEmpty) {
+    if (request.authMethod == AuthMethod.privateKey &&
+        privateKey != null &&
+        privateKey.isNotEmpty) {
       identities = SSHKeyPair.fromPem(
         privateKey,
         request.privateKeyPassphrase,
       );
     }
 
+    final password = request.password;
+    final passwordProvider = request.authMethod == AuthMethod.password
+        ? () {
+            final value = password;
+            return (value == null || value.trim().isEmpty) ? null : value;
+          }
+        : null;
+
+    final interactivePassword = request.authMethod ==
+            AuthMethod.keyboardInteractive
+        ? request.keyboardInteractivePassword
+        : null;
+
     final client = SSHClient(
       socket,
       username: request.username,
       identities: identities,
-      onPasswordRequest: request.password == null
+      onPasswordRequest: passwordProvider,
+      onUserInfoRequest: interactivePassword == null
           ? null
-          : () {
-              final password = request.password;
-              return (password == null || password.trim().isEmpty)
-                  ? null
-                  : password;
+          : (request) {
+              final value = interactivePassword.trim();
+              if (value.isEmpty) {
+                return null;
+              }
+              return List<String>.filled(request.prompts.length, value);
             },
       // TODO: replace this with known_hosts verification flow.
       onVerifyHostKey: (keyType, fingerprint) => true,

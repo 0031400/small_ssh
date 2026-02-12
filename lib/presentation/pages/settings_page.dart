@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:small_ssh/app/settings.dart';
 import 'package:small_ssh/domain/models/credential_ref.dart';
 import 'package:small_ssh/domain/repositories/credential_repository.dart';
+import 'package:small_ssh/presentation/widgets/auth_order_editor.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({
@@ -194,6 +195,32 @@ class _SettingsPageState extends State<SettingsPage> {
                       subtitle: const Text('有选中则复制，无选中则粘贴'),
                     ),
                   ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text('认证顺序', style: textTheme.titleMedium),
+              const SizedBox(height: 8),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.vpn_key_outlined),
+                          SizedBox(width: 12),
+                          Text('全局认证顺序'),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      AuthOrderEditor(
+                        order: widget.settings.authOrder,
+                        onChanged: widget.settings.setAuthOrder,
+                        height: 180,
+                      ),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 16),

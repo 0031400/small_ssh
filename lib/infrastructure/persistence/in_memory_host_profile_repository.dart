@@ -1,3 +1,4 @@
+import 'package:small_ssh/domain/models/auth_method.dart';
 import 'package:small_ssh/domain/models/host_profile.dart';
 import 'package:small_ssh/domain/repositories/host_profile_repository.dart';
 
@@ -10,6 +11,8 @@ class InMemoryHostProfileRepository implements HostProfileRepository {
       port: 22,
       username: 'developer',
       privateKeyMode: PrivateKeyMode.global,
+      authOrderMode: AuthOrderMode.global,
+      authOrder: defaultAuthOrder,
     ),
     'demo-box': const HostProfile(
       id: 'demo-box',
@@ -18,6 +21,8 @@ class InMemoryHostProfileRepository implements HostProfileRepository {
       port: 22,
       username: 'root',
       privateKeyMode: PrivateKeyMode.global,
+      authOrderMode: AuthOrderMode.global,
+      authOrder: defaultAuthOrder,
     ),
   };
 
