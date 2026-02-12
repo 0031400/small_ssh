@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:small_ssh/app/settings.dart';
 import 'package:small_ssh/app/theme.dart';
 import 'package:small_ssh/application/services/session_orchestrator.dart';
 import 'package:small_ssh/application/usecases/connect_to_host.dart';
@@ -21,12 +22,14 @@ class _SmallSshAppState extends State<SmallSshApp> {
   late final HostProfileRepository _hostRepository;
   late final CredentialRepository _credentialRepository;
   late final SessionOrchestrator _orchestrator;
+  late final AppSettings _settings;
 
   @override
   void initState() {
     super.initState();
     _hostRepository = FileHostProfileRepository();
     _credentialRepository = InMemoryCredentialRepository();
+    _settings = AppSettings();
 
     _orchestrator = SessionOrchestrator(
       hostRepository: _hostRepository,
@@ -42,16 +45,27 @@ class _SmallSshAppState extends State<SmallSshApp> {
   @override
   void dispose() {
     _orchestrator.dispose();
+    _settings.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'small_ssh',
-      theme: buildAppTheme(),
-      home: HomePage(orchestrator: _orchestrator),
-      debugShowCheckedModeBanner: false,
+    return AnimatedBuilder(
+      animation: _settings,
+      builder: (context, _) {
+        return MaterialApp(
+          title: 'small_ssh',
+          theme: buildAppTheme(),
+          darkTheme: buildAppDarkTheme(),
+          themeMode: _settings.themeMode,
+          home: HomePage(
+            orchestrator: _orchestrator,
+            settings: _settings,
+          ),
+          debugShowCheckedModeBanner: false,
+        );
+      },
     );
   }
 }

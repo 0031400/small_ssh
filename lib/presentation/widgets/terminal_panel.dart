@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:small_ssh/app/settings.dart';
 import 'package:small_ssh/application/services/session_orchestrator.dart';
 import 'package:small_ssh/presentation/pages/home_page.dart';
 import 'package:xterm/xterm.dart';
@@ -13,6 +14,7 @@ class TerminalPanel extends StatefulWidget {
     required this.onDeleteSession,
     required this.onSendInput,
     required this.onResizeTerminal,
+    required this.settings,
   });
 
   final List<SessionView> sessions;
@@ -28,6 +30,7 @@ class TerminalPanel extends StatefulWidget {
   })
   onResizeTerminal;
   final void Function(String sessionId) onSelectSession;
+  final AppSettings settings;
 
   @override
   State<TerminalPanel> createState() => _TerminalPanelState();
@@ -107,6 +110,9 @@ class _TerminalPanelState extends State<TerminalPanel> {
                   terminal,
                   hardwareKeyboardOnly: true,
                   controller: controller,
+                  textStyle: TerminalStyle(
+                    fontSize: widget.settings.terminalFontSize,
+                  ),
                   theme: const TerminalTheme(
                     cursor: Color(0xFFE2E8F0),
                     selection: Color(0x335B9CFF),
@@ -135,7 +141,11 @@ class _TerminalPanelState extends State<TerminalPanel> {
                   padding: const EdgeInsets.all(12),
                   autofocus: true,
                   onSecondaryTapUp: (details, _) {
-                    _showTerminalContextMenu(details, terminal, controller);
+                    _handleTerminalSecondaryTap(
+                      details,
+                      terminal,
+                      controller,
+                    );
                   },
                 ),
               ),
@@ -230,7 +240,7 @@ class _TerminalPanelState extends State<TerminalPanel> {
     widget.onResizeTerminal(sessionId, width, height);
   }
 
-  Future<void> _showTerminalContextMenu(
+  Future<void> _handleTerminalSecondaryTap(
     TapUpDetails details,
     Terminal terminal,
     TerminalController controller,
@@ -239,6 +249,20 @@ class _TerminalPanelState extends State<TerminalPanel> {
     final selectedText =
         selection == null ? null : terminal.buffer.getText(selection);
     final hasSelection = selectedText != null && selectedText.isNotEmpty;
+
+    if (widget.settings.clipboardBehavior == ClipboardBehavior.direct) {
+      if (hasSelection) {
+        await Clipboard.setData(ClipboardData(text: selectedText));
+      } else {
+        final data = await Clipboard.getData(Clipboard.kTextPlain);
+        final text = data?.text;
+        if (text != null && text.isNotEmpty) {
+          terminal.paste(text);
+          controller.clearSelection();
+        }
+      }
+      return;
+    }
 
     final overlay =
         Overlay.of(context).context.findRenderObject() as RenderBox;

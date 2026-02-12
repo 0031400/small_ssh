@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:small_ssh/app/settings.dart';
 import 'package:small_ssh/application/services/session_orchestrator.dart';
 import 'package:small_ssh/domain/models/connection_state_status.dart';
 import 'package:small_ssh/domain/models/host_profile.dart';
@@ -8,9 +9,14 @@ import 'package:small_ssh/presentation/widgets/terminal_panel.dart';
 import 'package:small_ssh/presentation/pages/settings_page.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key, required this.orchestrator});
+  const HomePage({
+    super.key,
+    required this.orchestrator,
+    required this.settings,
+  });
 
   final SessionOrchestrator orchestrator;
+  final AppSettings settings;
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -119,7 +125,7 @@ class _HomePageState extends State<HomePage> {
   void _openSettings() {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => const SettingsPage(),
+        builder: (context) => SettingsPage(settings: widget.settings),
       ),
     );
   }
@@ -127,7 +133,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: widget.orchestrator,
+      animation: Listenable.merge([widget.orchestrator, widget.settings]),
       builder: (context, _) {
         return Scaffold(
           appBar: AppBar(
@@ -162,6 +168,7 @@ class _HomePageState extends State<HomePage> {
                   onDeleteSession: widget.orchestrator.removeSession,
                   onSendInput: widget.orchestrator.sendInput,
                   onResizeTerminal: widget.orchestrator.resizeTerminal,
+                  settings: widget.settings,
                 ),
               ),
             ],
