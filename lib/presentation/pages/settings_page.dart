@@ -165,6 +165,16 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
               const SizedBox(height: 8),
               Card(
+                child: SwitchListTile(
+                  secondary: const Icon(Icons.folder_outlined),
+                  title: const Text('SFTP 面板'),
+                  subtitle: const Text('自动显示右侧 SFTP 面板'),
+                  value: widget.settings.autoOpenSftpPanel,
+                  onChanged: widget.settings.setAutoOpenSftpPanel,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Card(
                 child: Column(
                   children: [
                     const ListTile(

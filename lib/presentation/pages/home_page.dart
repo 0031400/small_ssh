@@ -28,6 +28,18 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  bool _sftpAvailable = true;
+  bool _sftpPanelOpen = true;
+  String? _lastSessionId;
+  bool? _lastAutoOpen;
+
+  @override
+  void initState() {
+    super.initState();
+    _sftpPanelOpen = widget.settings.autoOpenSftpPanel;
+    _lastAutoOpen = widget.settings.autoOpenSftpPanel;
+  }
+
   Future<void> _openHostDialog() async {
     final result = await showDialog<HostFormResult>(
       context: context,
@@ -164,10 +176,49 @@ class _HomePageState extends State<HomePage> {
     return AnimatedBuilder(
       animation: Listenable.merge([widget.orchestrator, widget.settings]),
       builder: (context, _) {
+        final currentSessionId = widget.orchestrator.activeSessionId;
+        if (currentSessionId != _lastSessionId) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            _lastSessionId = currentSessionId;
+            setState(() => _sftpAvailable = true);
+          });
+        }
+        final autoOpenSetting = widget.settings.autoOpenSftpPanel;
+        if (_lastAutoOpen != autoOpenSetting) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            _lastAutoOpen = autoOpenSetting;
+            if (!autoOpenSetting) {
+              setState(() => _sftpPanelOpen = false);
+            } else {
+              setState(() => _sftpPanelOpen = true);
+            }
+          });
+        }
+        final autoOpen = widget.settings.autoOpenSftpPanel;
+        final showSftpPanel =
+            (autoOpen || _sftpPanelOpen) && _sftpAvailable;
         return Scaffold(
           appBar: AppBar(
             title: const Text('small_ssh'),
             actions: [
+              IconButton(
+                tooltip: showSftpPanel ? 'Hide SFTP' : 'Show SFTP',
+                onPressed: () {
+                  setState(() {
+                    if (!_sftpAvailable) {
+                      _sftpAvailable = true;
+                    }
+                    _sftpPanelOpen = !showSftpPanel;
+                  });
+                },
+                icon: Icon(
+                  showSftpPanel
+                      ? Icons.folder_open_outlined
+                      : Icons.folder_outlined,
+                ),
+              ),
               IconButton(
                 tooltip: 'Settings',
                 onPressed: _openSettings,
@@ -209,17 +260,33 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      SizedBox(
-                        width: 280,
-                        child: Card(
-                          child: SftpPanel(
-                            orchestrator: widget.orchestrator,
-                            activeSessionId:
-                                widget.orchestrator.activeSessionId,
+                      if (showSftpPanel) ...[
+                        const SizedBox(width: 12),
+                        SizedBox(
+                          width: 280,
+                          child: Card(
+                            child: SftpPanel(
+                              orchestrator: widget.orchestrator,
+                              activeSessionId:
+                                  widget.orchestrator.activeSessionId,
+                              onAvailabilityChanged: (available) {
+                                if (available == _sftpAvailable) {
+                                  return;
+                                }
+                                WidgetsBinding.instance.addPostFrameCallback(
+                                  (_) {
+                                    if (!mounted ||
+                                        available == _sftpAvailable) {
+                                      return;
+                                    }
+                                    setState(() => _sftpAvailable = available);
+                                  },
+                                );
+                              },
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                 ),

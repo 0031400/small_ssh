@@ -8,10 +8,12 @@ class SftpPanel extends StatefulWidget {
     super.key,
     required this.orchestrator,
     required this.activeSessionId,
+    this.onAvailabilityChanged,
   });
 
   final SessionOrchestrator orchestrator;
   final String? activeSessionId;
+  final ValueChanged<bool>? onAvailabilityChanged;
 
   @override
   State<SftpPanel> createState() => _SftpPanelState();
@@ -24,6 +26,7 @@ class _SftpPanelState extends State<SftpPanel> {
   bool _loading = false;
   String? _error;
   SftpEntry? _selected;
+  bool _available = true;
 
   @override
   void didUpdateWidget(covariant SftpPanel oldWidget) {
@@ -45,7 +48,9 @@ class _SftpPanelState extends State<SftpPanel> {
     _entries = <SftpEntry>[];
     _currentPath = null;
     _error = null;
+    _available = true;
     if (_sessionId == null) {
+      widget.onAvailabilityChanged?.call(false);
       setState(() {});
       return;
     }
@@ -67,16 +72,22 @@ class _SftpPanelState extends State<SftpPanel> {
         setState(() {
           _loading = false;
           _error = 'SFTP unavailable for this session.';
+          _available = false;
         });
+        widget.onAvailabilityChanged?.call(false);
         return;
       }
+      _available = true;
+      widget.onAvailabilityChanged?.call(true);
       await _loadDirectory(home);
     } catch (error) {
       if (!mounted) return;
       setState(() {
         _loading = false;
         _error = error.toString();
+        _available = false;
       });
+      widget.onAvailabilityChanged?.call(false);
     }
   }
 
@@ -100,13 +111,17 @@ class _SftpPanelState extends State<SftpPanel> {
         _currentPath = path;
         _selected = null;
         _loading = false;
+        _available = true;
       });
+      widget.onAvailabilityChanged?.call(true);
     } catch (error) {
       if (!mounted) return;
       setState(() {
         _loading = false;
         _error = error.toString();
+        _available = false;
       });
+      widget.onAvailabilityChanged?.call(false);
     }
   }
 
@@ -261,6 +276,10 @@ class _SftpPanelState extends State<SftpPanel> {
           _loadHome();
         }
       });
+    }
+
+    if (!_available) {
+      return const SizedBox.shrink();
     }
 
     return Column(

@@ -18,12 +18,14 @@ class AppSettings extends ChangeNotifier {
   double _terminalFontSize = 13;
   ClipboardBehavior _clipboardBehavior = ClipboardBehavior.contextMenu;
   List<AuthMethod> _authOrder = List<AuthMethod>.of(defaultAuthOrder);
+  bool _autoOpenSftpPanel = true;
   bool _loading = false;
 
   ThemeMode get themeMode => _themeMode;
   double get terminalFontSize => _terminalFontSize;
   ClipboardBehavior get clipboardBehavior => _clipboardBehavior;
   List<AuthMethod> get authOrder => List<AuthMethod>.unmodifiable(_authOrder);
+  bool get autoOpenSftpPanel => _autoOpenSftpPanel;
 
   Future<void> load() async {
     if (kIsWeb) {
@@ -47,6 +49,8 @@ class AppSettings extends ChangeNotifier {
           _parseClipboardBehavior(data['clipboardBehavior']) ??
               _clipboardBehavior;
       _authOrder = _parseAuthOrder(data['authOrder']) ?? _authOrder;
+      _autoOpenSftpPanel =
+          _parseBool(data['autoOpenSftpPanel']) ?? _autoOpenSftpPanel;
       notifyListeners();
     } catch (_) {
       // Ignore corrupted settings and keep defaults.
@@ -92,6 +96,15 @@ class AppSettings extends ChangeNotifier {
     _save();
   }
 
+  void setAutoOpenSftpPanel(bool value) {
+    if (_autoOpenSftpPanel == value) {
+      return;
+    }
+    _autoOpenSftpPanel = value;
+    notifyListeners();
+    _save();
+  }
+
   Future<void> _save() async {
     if (_loading || kIsWeb) {
       return;
@@ -103,6 +116,7 @@ class AppSettings extends ChangeNotifier {
         'terminalFontSize': _terminalFontSize,
         'clipboardBehavior': _clipboardBehavior.name,
         'authOrder': _authOrder.map((item) => item.name).toList(),
+        'autoOpenSftpPanel': _autoOpenSftpPanel,
       };
       await file.writeAsString(jsonEncode(data));
     } catch (_) {
@@ -176,6 +190,21 @@ class AppSettings extends ChangeNotifier {
     }
     if (value is String) {
       return double.tryParse(value);
+    }
+    return null;
+  }
+
+  bool? _parseBool(Object? value) {
+    if (value is bool) {
+      return value;
+    }
+    if (value is String) {
+      if (value.toLowerCase() == 'true') {
+        return true;
+      }
+      if (value.toLowerCase() == 'false') {
+        return false;
+      }
     }
     return null;
   }
