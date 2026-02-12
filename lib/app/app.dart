@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:small_ssh/app/settings.dart';
 import 'package:small_ssh/app/theme.dart';
 import 'package:small_ssh/application/services/session_orchestrator.dart';
-import 'package:small_ssh/application/usecases/connect_to_host.dart';
-import 'package:small_ssh/application/usecases/disconnect_session.dart';
 import 'package:small_ssh/domain/repositories/credential_repository.dart';
 import 'package:small_ssh/domain/repositories/host_profile_repository.dart';
 import 'package:small_ssh/infrastructure/persistence/file_host_profile_repository.dart';
@@ -36,8 +34,6 @@ class _SmallSshAppState extends State<SmallSshApp> {
       hostRepository: _hostRepository,
       credentialRepository: _credentialRepository,
       sshGateway: DartSsh2Gateway(),
-      connectToHostUseCase: ConnectToHostUseCase(),
-      disconnectSessionUseCase: DisconnectSessionUseCase(),
     );
 
     _orchestrator.initialize();

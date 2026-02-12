@@ -1,8 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:small_ssh/application/usecases/connect_to_host.dart';
-import 'package:small_ssh/application/usecases/disconnect_session.dart';
 import 'package:small_ssh/domain/models/auth_method.dart';
 import 'package:small_ssh/domain/models/connection_state_status.dart';
 import 'package:small_ssh/domain/models/credential_ref.dart';
@@ -30,19 +28,13 @@ class SessionOrchestrator extends ChangeNotifier {
     required HostProfileRepository hostRepository,
     required CredentialRepository credentialRepository,
     required SshGateway sshGateway,
-    required ConnectToHostUseCase connectToHostUseCase,
-    required DisconnectSessionUseCase disconnectSessionUseCase,
   }) : _hostRepository = hostRepository,
        _credentialRepository = credentialRepository,
-       _sshGateway = sshGateway,
-       _connectToHostUseCase = connectToHostUseCase,
-       _disconnectSessionUseCase = disconnectSessionUseCase;
+       _sshGateway = sshGateway;
 
   final HostProfileRepository _hostRepository;
   final CredentialRepository _credentialRepository;
   final SshGateway _sshGateway;
-  final ConnectToHostUseCase _connectToHostUseCase;
-  final DisconnectSessionUseCase _disconnectSessionUseCase;
 
   final List<HostProfile> _hosts = <HostProfile>[];
   final Map<String, _ManagedSession> _sessions = <String, _ManagedSession>{};
@@ -142,8 +134,7 @@ class SessionOrchestrator extends ChangeNotifier {
     String? passwordOverride,
     List<AuthMethod>? authOrder,
   }) async {
-    final input = _connectToHostUseCase.buildInput(hostId);
-    final host = await _hostRepository.findById(input.hostId);
+    final host = await _hostRepository.findById(hostId);
 
     if (host == null) {
       return;
@@ -384,8 +375,7 @@ class SessionOrchestrator extends ChangeNotifier {
   }
 
   Future<void> disconnectSession(String sessionId) async {
-    final input = _disconnectSessionUseCase.buildInput(sessionId);
-    final managed = _sessions[input.sessionId];
+    final managed = _sessions[sessionId];
     if (managed == null) {
       return;
     }
@@ -397,8 +387,8 @@ class SessionOrchestrator extends ChangeNotifier {
       status: ConnectionStateStatus.disconnected,
     );
 
-    if (_activeSessionId == input.sessionId) {
-      _activeSessionId = _nextActiveSessionId(excluding: input.sessionId);
+    if (_activeSessionId == sessionId) {
+      _activeSessionId = _nextActiveSessionId(excluding: sessionId);
     }
 
     notifyListeners();
