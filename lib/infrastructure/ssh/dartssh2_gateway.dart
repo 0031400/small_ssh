@@ -207,6 +207,7 @@ class _DartSsh2Connection implements SshConnection {
     required String remotePath,
     required String localPath,
     void Function(int transferred, int total)? onProgress,
+    bool Function()? shouldCancel,
   }) async {
     final sftp = await _openSftp();
     final file = await sftp.open(remotePath, mode: SftpFileOpenMode.read);
@@ -220,17 +221,71 @@ class _DartSsh2Connection implements SshConnection {
     } catch (_) {
       total = 0;
     }
-    await for (final chunk in file.read(
+    var cancelled = false;
+    var cancelSignaled = false;
+    StreamSubscription<Uint8List>? sub;
+    final done = Completer<void>();
+    final cancelSignal = Completer<void>();
+    sub = file.read(
       onProgress: (read) {
+        if (shouldCancel != null && shouldCancel()) {
+          cancelled = true;
+          if (!cancelSignaled) {
+            cancelSignaled = true;
+            cancelSignal.complete();
+          }
+          return;
+        }
         if (total > 0 && onProgress != null) {
           onProgress(read, total);
         }
       },
-    )) {
-      sink.add(chunk);
+    ).listen(
+      (chunk) {
+        if (cancelled || (shouldCancel != null && shouldCancel())) {
+          cancelled = true;
+          if (!cancelSignaled) {
+            cancelSignaled = true;
+            cancelSignal.complete();
+          }
+          return;
+        }
+        sink.add(chunk);
+      },
+      onError: (error, stack) {
+        if (!done.isCompleted) {
+          done.completeError(error, stack);
+        }
+      },
+      onDone: () {
+        if (!done.isCompleted) {
+          done.complete();
+        }
+      },
+      cancelOnError: true,
+    );
+    try {
+      await Future.any([done.future, cancelSignal.future]);
+    } finally {
+      if (!cancelled) {
+        await sub?.cancel();
+        await sink.close();
+        await file.close();
+      }
     }
-    await sink.close();
-    await file.close();
+    if (cancelled) {
+      done.future
+          .catchError((_) {})
+          .whenComplete(() async {
+            await sub?.cancel();
+            await sink.close();
+            await file.close();
+            if (await localFile.exists()) {
+              await localFile.delete();
+            }
+          });
+      throw StateError('Transfer cancelled');
+    }
     if (total == 0 && onProgress != null) {
       final length = await localFile.length();
       onProgress(length, length);
@@ -242,6 +297,7 @@ class _DartSsh2Connection implements SshConnection {
     required String localPath,
     required String remotePath,
     void Function(int transferred, int total)? onProgress,
+    bool Function()? shouldCancel,
   }) async {
     final localFile = File(localPath);
     if (!await localFile.exists()) {
@@ -255,16 +311,36 @@ class _DartSsh2Connection implements SshConnection {
           SftpFileOpenMode.truncate,
     );
     final total = await localFile.length();
-    final writer = file.write(
+    var cancelled = false;
+    var abortRequested = false;
+    late final SftpFileWriter writer;
+    writer = file.write(
       localFile.openRead().map((chunk) => Uint8List.fromList(chunk)),
       onProgress: (written) {
+        if (shouldCancel != null && shouldCancel()) {
+          cancelled = true;
+          if (!abortRequested) {
+            abortRequested = true;
+            writer.abort();
+          }
+          return;
+        }
         if (onProgress != null) {
           onProgress(written, total);
         }
       },
     );
-    await writer.done;
-    await file.close();
+    try {
+      await writer.done;
+    } finally {
+      await file.close();
+    }
+    if (cancelled || (shouldCancel != null && shouldCancel())) {
+      try {
+        await sftp.remove(remotePath);
+      } catch (_) {}
+      throw StateError('Transfer cancelled');
+    }
   }
 
   Future<SftpClient> _openSftp() {

@@ -46,11 +46,13 @@ abstract class SshConnection {
     required String remotePath,
     required String localPath,
     void Function(int transferred, int total)? onProgress,
+    bool Function()? shouldCancel,
   });
   Future<void> uploadSftpFile({
     required String localPath,
     required String remotePath,
     void Function(int transferred, int total)? onProgress,
+    bool Function()? shouldCancel,
   });
   Future<void> disconnect();
 }

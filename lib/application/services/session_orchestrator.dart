@@ -499,6 +499,7 @@ class SessionOrchestrator extends ChangeNotifier {
     required String remotePath,
     required String localPath,
     void Function(int transferred, int total)? onProgress,
+    bool Function()? shouldCancel,
   }) async {
     final managed = _sessions[sessionId];
     if (managed == null || managed.connection == null) {
@@ -508,6 +509,7 @@ class SessionOrchestrator extends ChangeNotifier {
       remotePath: remotePath,
       localPath: localPath,
       onProgress: onProgress,
+      shouldCancel: shouldCancel,
     );
   }
 
@@ -516,6 +518,7 @@ class SessionOrchestrator extends ChangeNotifier {
     required String localPath,
     required String remotePath,
     void Function(int transferred, int total)? onProgress,
+    bool Function()? shouldCancel,
   }) async {
     final managed = _sessions[sessionId];
     if (managed == null || managed.connection == null) {
@@ -525,6 +528,7 @@ class SessionOrchestrator extends ChangeNotifier {
       localPath: localPath,
       remotePath: remotePath,
       onProgress: onProgress,
+      shouldCancel: shouldCancel,
     );
   }
 

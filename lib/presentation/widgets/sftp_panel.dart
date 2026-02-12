@@ -36,6 +36,7 @@ class _SftpPanelState extends State<SftpPanel> {
   String? _transferLabel;
   double? _transferProgress;
   DateTime? _lastProgressPaint;
+  bool _cancelRequested = false;
 
   @override
   void didUpdateWidget(covariant SftpPanel oldWidget) {
@@ -192,6 +193,9 @@ class _SftpPanelState extends State<SftpPanel> {
     }
     try {
       for (final entry in filesOnly) {
+        if (_cancelRequested) {
+          break;
+        }
         _startTransfer('Downloading', entry.name);
         final localPath = _joinLocal(directory.trim(), entry.name);
         await widget.orchestrator.downloadSftpFile(
@@ -201,6 +205,7 @@ class _SftpPanelState extends State<SftpPanel> {
           onProgress: (transferred, total) {
             _updateTransferProgress(transferred, total);
           },
+          shouldCancel: () => _cancelRequested,
         );
       }
       if (!mounted) return;
@@ -242,6 +247,7 @@ class _SftpPanelState extends State<SftpPanel> {
         onProgress: (transferred, total) {
           _updateTransferProgress(transferred, total);
         },
+        shouldCancel: () => _cancelRequested,
       );
       if (!mounted) return;
       _finishTransfer();
@@ -266,6 +272,9 @@ class _SftpPanelState extends State<SftpPanel> {
     }
     try {
       for (final item in files) {
+        if (_cancelRequested) {
+          break;
+        }
         final localPath = item.path;
         if (localPath.isEmpty) {
           continue;
@@ -280,6 +289,7 @@ class _SftpPanelState extends State<SftpPanel> {
           onProgress: (transferred, total) {
             _updateTransferProgress(transferred, total);
           },
+          shouldCancel: () => _cancelRequested,
         );
       }
       if (!mounted) return;
@@ -394,6 +404,7 @@ class _SftpPanelState extends State<SftpPanel> {
     _transferLabel = '$action: $name';
     _transferProgress = 0;
     _lastProgressPaint = null;
+    _cancelRequested = false;
     setState(() {});
   }
 
@@ -417,6 +428,15 @@ class _SftpPanelState extends State<SftpPanel> {
     _transferLabel = null;
     _transferProgress = null;
     _lastProgressPaint = null;
+    _cancelRequested = false;
+    setState(() {});
+  }
+
+  void _cancelTransfer() {
+    if (!_transferActive) {
+      return;
+    }
+    _cancelRequested = true;
     setState(() {});
   }
 
@@ -541,9 +561,19 @@ class _SftpPanelState extends State<SftpPanel> {
               ),
               if (_transferActive) ...[
                 const SizedBox(height: 6),
-                Text(
-                  _transferLabel ?? 'Transferring...',
-                  style: Theme.of(context).textTheme.bodySmall,
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        _transferLabel ?? 'Transferring...',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: _cancelRequested ? null : _cancelTransfer,
+                      child: const Text('Cancel'),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 4),
                 LinearProgressIndicator(value: _transferProgress),
