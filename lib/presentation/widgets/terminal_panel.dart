@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:small_ssh/application/services/session_orchestrator.dart';
 import 'package:small_ssh/presentation/pages/home_page.dart';
 import 'package:xterm/xterm.dart';
@@ -34,6 +35,8 @@ class TerminalPanel extends StatefulWidget {
 
 class _TerminalPanelState extends State<TerminalPanel> {
   final Map<String, Terminal> _terminals = <String, Terminal>{};
+  final Map<String, TerminalController> _controllers =
+      <String, TerminalController>{};
   final Map<String, int> _renderedLineCount = <String, int>{};
   final Map<String, _TerminalGridSize> _lastSyncedGridSize =
       <String, _TerminalGridSize>{};
@@ -41,6 +44,10 @@ class _TerminalPanelState extends State<TerminalPanel> {
   @override
   void dispose() {
     _terminals.clear();
+    for (final controller in _controllers.values) {
+      controller.dispose();
+    }
+    _controllers.clear();
     _renderedLineCount.clear();
     _lastSyncedGridSize.clear();
     super.dispose();
@@ -60,6 +67,7 @@ class _TerminalPanelState extends State<TerminalPanel> {
     );
     _syncTerminals(widget.sessions);
     final terminal = _terminals[active.session.id]!;
+    final controller = _controllers[active.session.id]!;
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -98,6 +106,7 @@ class _TerminalPanelState extends State<TerminalPanel> {
                 child: TerminalView(
                   terminal,
                   hardwareKeyboardOnly: true,
+                  controller: controller,
                   theme: const TerminalTheme(
                     cursor: Color(0xFFE2E8F0),
                     selection: Color(0x335B9CFF),
@@ -125,6 +134,9 @@ class _TerminalPanelState extends State<TerminalPanel> {
                   ),
                   padding: const EdgeInsets.all(12),
                   autofocus: true,
+                  onSecondaryTapUp: (details, _) {
+                    _showTerminalContextMenu(details, terminal, controller);
+                  },
                 ),
               ),
             ),
@@ -157,12 +169,14 @@ class _TerminalPanelState extends State<TerminalPanel> {
 
     for (final id in removedIds) {
       _terminals.remove(id);
+      _controllers.remove(id)?.dispose();
       _renderedLineCount.remove(id);
       _lastSyncedGridSize.remove(id);
     }
 
     for (final session in sessions) {
       final id = session.session.id;
+      _controllers.putIfAbsent(id, () => TerminalController());
       final terminal = _terminals.putIfAbsent(id, () {
         final created = Terminal(maxLines: 5000);
         created.onOutput = (data) => widget.onSendInput(id, data);
@@ -215,7 +229,58 @@ class _TerminalPanelState extends State<TerminalPanel> {
     _lastSyncedGridSize[sessionId] = next;
     widget.onResizeTerminal(sessionId, width, height);
   }
+
+  Future<void> _showTerminalContextMenu(
+    TapUpDetails details,
+    Terminal terminal,
+    TerminalController controller,
+  ) async {
+    final selection = controller.selection;
+    final selectedText =
+        selection == null ? null : terminal.buffer.getText(selection);
+    final hasSelection = selectedText != null && selectedText.isNotEmpty;
+
+    final overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox;
+    final position = RelativeRect.fromRect(
+      Rect.fromPoints(details.globalPosition, details.globalPosition),
+      Offset.zero & overlay.size,
+    );
+
+    final action = await showMenu<_TerminalMenuAction>(
+      context: context,
+      position: position,
+      items: [
+        if (hasSelection)
+          const PopupMenuItem(
+            value: _TerminalMenuAction.copy,
+            child: Text('Copy'),
+          )
+        else
+          const PopupMenuItem(
+            value: _TerminalMenuAction.paste,
+            child: Text('Paste'),
+          ),
+      ],
+    );
+
+    if (action == _TerminalMenuAction.copy && hasSelection) {
+      await Clipboard.setData(ClipboardData(text: selectedText));
+      return;
+    }
+
+    if (action == _TerminalMenuAction.paste) {
+      final data = await Clipboard.getData(Clipboard.kTextPlain);
+      final text = data?.text;
+      if (text != null && text.isNotEmpty) {
+        terminal.paste(text);
+        controller.clearSelection();
+      }
+    }
+  }
 }
+
+enum _TerminalMenuAction { copy, paste }
 
 class _TerminalGridSize {
   const _TerminalGridSize({required this.width, required this.height});
