@@ -1,4 +1,9 @@
-enum CredentialKind { password, privateKeyFile, privateKeyText }
+enum CredentialKind {
+  password,
+  privateKeyFile,
+  privateKeyText,
+  privateKeyPassphrase,
+}
 
 class CredentialRef {
   const CredentialRef({required this.id, required this.kind});

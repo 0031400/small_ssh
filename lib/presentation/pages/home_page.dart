@@ -3,6 +3,7 @@ import 'package:small_ssh/app/settings.dart';
 import 'package:small_ssh/application/services/session_orchestrator.dart';
 import 'package:small_ssh/domain/models/connection_state_status.dart';
 import 'package:small_ssh/domain/models/host_profile.dart';
+import 'package:small_ssh/domain/repositories/credential_repository.dart';
 import 'package:small_ssh/presentation/widgets/host_form_dialog.dart';
 import 'package:small_ssh/presentation/widgets/password_prompt_dialog.dart';
 import 'package:small_ssh/presentation/widgets/terminal_panel.dart';
@@ -13,10 +14,12 @@ class HomePage extends StatefulWidget {
     super.key,
     required this.orchestrator,
     required this.settings,
+    required this.credentialRepository,
   });
 
   final SessionOrchestrator orchestrator;
   final AppSettings settings;
+  final CredentialRepository credentialRepository;
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -39,6 +42,9 @@ class _HomePageState extends State<HomePage> {
       port: result.port,
       username: result.username,
       password: result.password,
+      privateKeyMode: result.privateKeyMode,
+      privateKey: result.privateKey,
+      privateKeyPassphrase: result.privateKeyPassphrase,
     );
 
     if (!mounted || error == null) {
@@ -93,6 +99,9 @@ class _HomePageState extends State<HomePage> {
       port: result.port,
       username: result.username,
       password: result.password,
+      privateKeyMode: result.privateKeyMode,
+      privateKey: result.privateKey,
+      privateKeyPassphrase: result.privateKeyPassphrase,
     );
 
     if (!mounted || error == null) {
@@ -103,9 +112,11 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _connectToHost(HostProfile host) async {
-    final hasPassword = await widget.orchestrator.hasPasswordForHost(host.id);
+    final needsPassword = await widget.orchestrator.needsPasswordForHost(
+      host.id,
+    );
     String? override;
-    if (!hasPassword) {
+    if (needsPassword) {
       final entered = await showDialog<String>(
         context: context,
         builder: (context) => PasswordPromptDialog(host: host),
@@ -125,7 +136,10 @@ class _HomePageState extends State<HomePage> {
   void _openSettings() {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => SettingsPage(settings: widget.settings),
+        builder: (context) => SettingsPage(
+          settings: widget.settings,
+          credentialRepository: widget.credentialRepository,
+        ),
       ),
     );
   }

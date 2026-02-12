@@ -9,6 +9,7 @@ class InMemoryHostProfileRepository implements HostProfileRepository {
       host: '127.0.0.1',
       port: 22,
       username: 'developer',
+      privateKeyMode: PrivateKeyMode.global,
     ),
     'demo-box': const HostProfile(
       id: 'demo-box',
@@ -16,6 +17,7 @@ class InMemoryHostProfileRepository implements HostProfileRepository {
       host: '192.168.1.100',
       port: 22,
       username: 'root',
+      privateKeyMode: PrivateKeyMode.global,
     ),
   };
 

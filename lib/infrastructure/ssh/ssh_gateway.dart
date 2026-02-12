@@ -5,13 +5,17 @@ class SshConnectRequest {
     required this.host,
     required this.port,
     required this.username,
-    required this.password,
+    this.password,
+    this.privateKey,
+    this.privateKeyPassphrase,
   });
 
   final String host;
   final int port;
   final String username;
-  final String password;
+  final String? password;
+  final String? privateKey;
+  final String? privateKeyPassphrase;
 }
 
 abstract class SshConnection {

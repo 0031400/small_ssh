@@ -12,10 +12,27 @@ class DartSsh2Gateway implements SshGateway {
   Future<SshConnection> connect(SshConnectRequest request) async {
     final socket = await SSHSocket.connect(request.host, request.port);
 
+    List<SSHKeyPair>? identities;
+    final privateKey = _normalizePem(request.privateKey);
+    if (privateKey != null && privateKey.isNotEmpty) {
+      identities = SSHKeyPair.fromPem(
+        privateKey,
+        request.privateKeyPassphrase,
+      );
+    }
+
     final client = SSHClient(
       socket,
       username: request.username,
-      onPasswordRequest: () => request.password,
+      identities: identities,
+      onPasswordRequest: request.password == null
+          ? null
+          : () {
+              final password = request.password;
+              return (password == null || password.trim().isEmpty)
+                  ? null
+                  : password;
+            },
       // TODO: replace this with known_hosts verification flow.
       onVerifyHostKey: (keyType, fingerprint) => true,
     );
@@ -28,6 +45,17 @@ class DartSsh2Gateway implements SshGateway {
       client: client,
       shell: shell,
     );
+  }
+
+  String? _normalizePem(String? pem) {
+    if (pem == null) {
+      return null;
+    }
+    final trimmed = pem.trim();
+    if (trimmed.isEmpty) {
+      return null;
+    }
+    return trimmed.replaceAll('\r\n', '\n');
   }
 }
 
@@ -97,4 +125,5 @@ class _DartSsh2Connection implements SshConnection {
   }) async {
     _shell.resizeTerminal(width, height, pixelWidth, pixelHeight);
   }
+
 }

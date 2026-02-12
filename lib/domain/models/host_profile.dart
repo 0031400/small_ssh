@@ -1,3 +1,5 @@
+enum PrivateKeyMode { global, host, none }
+
 class HostProfile {
   const HostProfile({
     required this.id,
@@ -5,6 +7,7 @@ class HostProfile {
     required this.host,
     required this.port,
     required this.username,
+    this.privateKeyMode = PrivateKeyMode.global,
   });
 
   final String id;
@@ -12,4 +15,5 @@ class HostProfile {
   final String host;
   final int port;
   final String username;
+  final PrivateKeyMode privateKeyMode;
 }

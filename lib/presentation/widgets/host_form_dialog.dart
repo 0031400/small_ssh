@@ -8,6 +8,9 @@ class HostFormResult {
     required this.port,
     required this.username,
     required this.password,
+    required this.privateKeyMode,
+    required this.privateKey,
+    required this.privateKeyPassphrase,
   });
 
   final String name;
@@ -15,6 +18,9 @@ class HostFormResult {
   final int port;
   final String username;
   final String password;
+  final PrivateKeyMode privateKeyMode;
+  final String privateKey;
+  final String privateKeyPassphrase;
 }
 
 class HostFormDialog extends StatefulWidget {
@@ -33,6 +39,9 @@ class _HostFormDialogState extends State<HostFormDialog> {
   late final TextEditingController _portController;
   late final TextEditingController _usernameController;
   late final TextEditingController _passwordController;
+  late final TextEditingController _privateKeyController;
+  late final TextEditingController _privateKeyPassphraseController;
+  late PrivateKeyMode _privateKeyMode;
 
   bool get _isEditing => widget.initialHost != null;
 
@@ -45,6 +54,9 @@ class _HostFormDialogState extends State<HostFormDialog> {
     _portController = TextEditingController(text: '${initial?.port ?? 22}');
     _usernameController = TextEditingController(text: initial?.username ?? '');
     _passwordController = TextEditingController();
+    _privateKeyController = TextEditingController();
+    _privateKeyPassphraseController = TextEditingController();
+    _privateKeyMode = initial?.privateKeyMode ?? PrivateKeyMode.global;
   }
 
   @override
@@ -54,6 +66,8 @@ class _HostFormDialogState extends State<HostFormDialog> {
     _portController.dispose();
     _usernameController.dispose();
     _passwordController.dispose();
+    _privateKeyController.dispose();
+    _privateKeyPassphraseController.dispose();
     super.dispose();
   }
 
@@ -96,6 +110,53 @@ class _HostFormDialogState extends State<HostFormDialog> {
                 ),
                 obscureText: true,
               ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<PrivateKeyMode>(
+                value: _privateKeyMode,
+                decoration: const InputDecoration(
+                  labelText: 'Private Key',
+                ),
+                items: const [
+                  DropdownMenuItem(
+                    value: PrivateKeyMode.global,
+                    child: Text('Use global private key'),
+                  ),
+                  DropdownMenuItem(
+                    value: PrivateKeyMode.host,
+                    child: Text('Use host-specific private key'),
+                  ),
+                  DropdownMenuItem(
+                    value: PrivateKeyMode.none,
+                    child: Text('Do not use private key'),
+                  ),
+                ],
+                onChanged: (value) {
+                  if (value == null) {
+                    return;
+                  }
+                  setState(() => _privateKeyMode = value);
+                },
+              ),
+              if (_privateKeyMode == PrivateKeyMode.host) ...[
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _privateKeyController,
+                  decoration: const InputDecoration(
+                    labelText: 'Private Key (optional, leave blank to keep)',
+                    alignLabelWithHint: true,
+                  ),
+                  minLines: 3,
+                  maxLines: 6,
+                ),
+                TextFormField(
+                  controller: _privateKeyPassphraseController,
+                  decoration: const InputDecoration(
+                    labelText:
+                        'Private Key Passphrase (optional, leave blank to keep)',
+                  ),
+                  obscureText: true,
+                ),
+              ],
             ],
           ),
         ),
@@ -146,6 +207,9 @@ class _HostFormDialogState extends State<HostFormDialog> {
         port: int.parse(_portController.text.trim()),
         username: _usernameController.text.trim(),
         password: _passwordController.text,
+        privateKeyMode: _privateKeyMode,
+        privateKey: _privateKeyController.text,
+        privateKeyPassphrase: _privateKeyPassphraseController.text,
       ),
     );
   }

@@ -14,6 +14,11 @@ class InMemoryCredentialRepository implements CredentialRepository {
 
   @override
   Future<void> writeSecret(CredentialRef credentialRef, String secret) async {
+    final trimmed = secret.trim();
+    if (trimmed.isEmpty) {
+      _secrets.remove(credentialRef.id);
+      return;
+    }
     _secrets[credentialRef.id] = secret;
   }
 }

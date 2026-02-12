@@ -105,6 +105,25 @@ class SessionOrchestrator extends ChangeNotifier {
     return secret != null && secret.trim().isNotEmpty;
   }
 
+  Future<bool> needsPasswordForHost(String hostId) async {
+    final host = await _hostRepository.findById(hostId);
+    if (host == null) {
+      return false;
+    }
+
+    final keyMaterial = await _loadPrivateKeyForHost(host);
+    if (keyMaterial != null) {
+      return false;
+    }
+
+    final credential = CredentialRef(
+      id: '$hostId-password',
+      kind: CredentialKind.password,
+    );
+    final secret = await _credentialRepository.readSecret(credential);
+    return secret == null || secret.trim().isEmpty;
+  }
+
   Future<void> connectToHost(
     String hostId, {
     String? passwordOverride,
@@ -134,6 +153,7 @@ class SessionOrchestrator extends ChangeNotifier {
     notifyListeners();
 
     try {
+      final keyMaterial = await _loadPrivateKeyForHost(host);
       final credential = CredentialRef(
         id: '${host.id}-password',
         kind: CredentialKind.password,
@@ -144,8 +164,9 @@ class SessionOrchestrator extends ChangeNotifier {
           (override != null && override.isNotEmpty)
               ? override
               : storedPassword?.trim();
-      if (password == null || password.isEmpty) {
-        throw StateError('Password is required to connect.');
+      final hasPassword = password != null && password.isNotEmpty;
+      if (keyMaterial == null && !hasPassword) {
+        throw StateError('Password or private key is required to connect.');
       }
 
       final connection = await _sshGateway.connect(
@@ -153,7 +174,9 @@ class SessionOrchestrator extends ChangeNotifier {
           host: host.host,
           port: host.port,
           username: host.username,
-          password: password,
+          password: hasPassword ? password : null,
+          privateKey: keyMaterial?.privateKey,
+          privateKeyPassphrase: keyMaterial?.passphrase,
         ),
       );
 
@@ -212,6 +235,9 @@ class SessionOrchestrator extends ChangeNotifier {
     required int port,
     required String username,
     String? password,
+    required PrivateKeyMode privateKeyMode,
+    String? privateKey,
+    String? privateKeyPassphrase,
   }) async {
     final normalizedName = name.trim();
     final normalizedHost = host.trim();
@@ -233,6 +259,7 @@ class SessionOrchestrator extends ChangeNotifier {
       host: normalizedHost,
       port: port,
       username: normalizedUser,
+      privateKeyMode: privateKeyMode,
     );
 
     await _hostRepository.save(profile);
@@ -246,6 +273,12 @@ class SessionOrchestrator extends ChangeNotifier {
         secret,
       );
     }
+    await _writePrivateKeyIfNeeded(
+      hostId: profile.id,
+      mode: privateKeyMode,
+      privateKey: privateKey,
+      passphrase: privateKeyPassphrase,
+    );
     _hosts.add(profile);
     notifyListeners();
     return null;
@@ -258,6 +291,9 @@ class SessionOrchestrator extends ChangeNotifier {
     required int port,
     required String username,
     String? password,
+    required PrivateKeyMode privateKeyMode,
+    String? privateKey,
+    String? privateKeyPassphrase,
   }) async {
     final normalizedName = name.trim();
     final normalizedHost = host.trim();
@@ -284,6 +320,7 @@ class SessionOrchestrator extends ChangeNotifier {
       host: normalizedHost,
       port: port,
       username: normalizedUser,
+      privateKeyMode: privateKeyMode,
     );
 
     await _hostRepository.save(updated);
@@ -296,6 +333,12 @@ class SessionOrchestrator extends ChangeNotifier {
         secret,
       );
     }
+    await _writePrivateKeyIfNeeded(
+      hostId: hostId,
+      mode: privateKeyMode,
+      privateKey: privateKey,
+      passphrase: privateKeyPassphrase,
+    );
 
     for (final managed in _sessions.values) {
       if (managed.hostProfile.id == hostId) {
@@ -413,6 +456,72 @@ class SessionOrchestrator extends ChangeNotifier {
     }
     return null;
   }
+
+  Future<_PrivateKeyMaterial?> _loadPrivateKeyForHost(HostProfile host) async {
+    final mode = host.privateKeyMode;
+    if (mode == PrivateKeyMode.none) {
+      return null;
+    }
+
+    final keyId = mode == PrivateKeyMode.host
+        ? '${host.id}-private-key'
+        : 'global-private-key';
+    final passphraseId = mode == PrivateKeyMode.host
+        ? '${host.id}-private-key-passphrase'
+        : 'global-private-key-passphrase';
+
+    final key = await _credentialRepository.readSecret(
+      CredentialRef(id: keyId, kind: CredentialKind.privateKeyText),
+    );
+    if (key == null || key.trim().isEmpty) {
+      return null;
+    }
+    final passphrase = await _credentialRepository.readSecret(
+      CredentialRef(id: passphraseId, kind: CredentialKind.privateKeyPassphrase),
+    );
+    return _PrivateKeyMaterial(
+      privateKey: key,
+      passphrase: passphrase?.trim().isEmpty == true ? null : passphrase,
+    );
+  }
+
+  Future<void> _writePrivateKeyIfNeeded({
+    required String hostId,
+    required PrivateKeyMode mode,
+    String? privateKey,
+    String? passphrase,
+  }) async {
+    if (mode != PrivateKeyMode.host) {
+      return;
+    }
+    final key = privateKey?.trim();
+    if (key != null && key.isNotEmpty) {
+      await _credentialRepository.writeSecret(
+        CredentialRef(
+          id: '$hostId-private-key',
+          kind: CredentialKind.privateKeyText,
+        ),
+        privateKey!,
+      );
+    }
+    final pass = passphrase?.trim();
+    if (pass != null && pass.isNotEmpty) {
+      await _credentialRepository.writeSecret(
+        CredentialRef(
+          id: '$hostId-private-key-passphrase',
+          kind: CredentialKind.privateKeyPassphrase,
+        ),
+        passphrase!,
+      );
+    }
+  }
+}
+
+class _PrivateKeyMaterial {
+  const _PrivateKeyMaterial({required this.privateKey, this.passphrase});
+
+  final String privateKey;
+  final String? passphrase;
 }
 
 class _ManagedSession {

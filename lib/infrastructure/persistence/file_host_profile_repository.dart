@@ -17,6 +17,7 @@ class FileHostProfileRepository implements HostProfileRepository {
       host: '127.0.0.1',
       port: 22,
       username: 'developer',
+      privateKeyMode: PrivateKeyMode.global,
     ),
     HostProfile(
       id: 'demo-box',
@@ -24,6 +25,7 @@ class FileHostProfileRepository implements HostProfileRepository {
       host: '192.168.1.100',
       port: 22,
       username: 'root',
+      privateKeyMode: PrivateKeyMode.global,
     ),
   ];
 
@@ -86,6 +88,7 @@ class FileHostProfileRepository implements HostProfileRepository {
           host: (json['host'] ?? '').toString(),
           port: (json['port'] as num?)?.toInt() ?? 22,
           username: (json['username'] ?? '').toString(),
+          privateKeyMode: _parsePrivateKeyMode(json['privateKeyMode']),
         );
         if (profile.id.isEmpty ||
             profile.name.isEmpty ||
@@ -115,6 +118,7 @@ class FileHostProfileRepository implements HostProfileRepository {
             'host': host.host,
             'port': host.port,
             'username': host.username,
+            'privateKeyMode': host.privateKeyMode.name,
           },
         )
         .toList(growable: false);
@@ -129,5 +133,16 @@ class FileHostProfileRepository implements HostProfileRepository {
     final executableDir = File(Platform.resolvedExecutable).parent.path;
     final separator = Platform.pathSeparator;
     return File('$executableDir${separator}hosts.json');
+  }
+
+  PrivateKeyMode _parsePrivateKeyMode(Object? value) {
+    if (value is String) {
+      for (final mode in PrivateKeyMode.values) {
+        if (mode.name == value) {
+          return mode;
+        }
+      }
+    }
+    return PrivateKeyMode.global;
   }
 }
