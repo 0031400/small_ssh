@@ -1,4 +1,5 @@
 import 'package:desktop_drop/desktop_drop.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:small_ssh/application/services/session_orchestrator.dart';
@@ -211,11 +212,11 @@ class _SftpPanelState extends State<SftpPanel> {
     if (sessionId == null || current == null) {
       return;
     }
-    final localPath = await _promptForPath(
-      title: 'Paste from Local',
-      hint: 'C:\\path\\to\\file.txt',
-      actionLabel: 'Paste',
+    final picked = await FilePicker.platform.pickFiles(
+      dialogTitle: 'Select file to upload',
+      allowMultiple: false,
     );
+    final localPath = picked?.files.single.path;
     if (localPath == null || localPath.trim().isEmpty) {
       return;
     }
@@ -568,7 +569,7 @@ class _SftpPanelState extends State<SftpPanel> {
                   ),
                   const SizedBox(width: 8),
                   IconButton(
-                    tooltip: 'Upload by path',
+                    tooltip: 'Upload',
                     onPressed:
                         !isConnected || _loading ? null : _uploadFromLocal,
                     icon: const Icon(Icons.upload_file, size: 18),
@@ -652,9 +653,6 @@ class _SftpPanelState extends State<SftpPanel> {
             });
           },
           onDoubleTap: entry.isDirectory
-              ? () => _loadDirectory(entry.path)
-              : null,
-          onLongPress: entry.isDirectory
               ? () => _loadDirectory(entry.path)
               : null,
           child: ListTile(

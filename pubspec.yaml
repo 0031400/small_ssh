@@ -37,6 +37,7 @@ dependencies:
   dartssh2: ^2.13.0
   xterm: ^4.0.0
   desktop_drop: ^0.5.0
+  file_picker: ^8.0.0
 
 dev_dependencies:
   flutter_test:
