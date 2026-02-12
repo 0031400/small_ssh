@@ -1,5 +1,6 @@
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:small_ssh/application/services/session_orchestrator.dart';
 import 'package:small_ssh/domain/models/connection_state_status.dart';
 import 'package:small_ssh/domain/models/sftp_entry.dart';
@@ -27,6 +28,7 @@ class _SftpPanelState extends State<SftpPanel> {
   bool _loading = false;
   String? _error;
   final Set<String> _selectedPaths = <String>{};
+  int? _lastSelectedIndex;
   bool _available = true;
   bool _dragging = false;
 
@@ -112,6 +114,7 @@ class _SftpPanelState extends State<SftpPanel> {
         _entries = entries;
         _currentPath = path;
         _selectedPaths.clear();
+        _lastSelectedIndex = null;
         _loading = false;
         _available = true;
       });
@@ -610,42 +613,77 @@ class _SftpPanelState extends State<SftpPanel> {
       itemBuilder: (context, index) {
         final entry = _entries[index];
         final isSelected = _selectedPaths.contains(entry.path);
-        return ListTile(
-          dense: true,
-          visualDensity: VisualDensity.compact,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-          selected: isSelected,
-          leading: Icon(
-            entry.isDirectory ? Icons.folder : Icons.insert_drive_file_outlined,
-            size: 18,
-          ),
-          title: Text(
-            entry.name,
-            overflow: TextOverflow.ellipsis,
-          ),
-          subtitle: entry.isDirectory
-              ? const Text('Folder')
-              : Text(_formatSize(entry.size)),
-          trailing: entry.isDirectory
-              ? IconButton(
-                  tooltip: 'Open',
-                  visualDensity: VisualDensity.compact,
-                  icon: const Icon(Icons.arrow_forward_ios, size: 14),
-                  onPressed: () => _loadDirectory(entry.path),
-                )
-              : null,
+        return InkWell(
           onTap: () {
+            final keys = HardwareKeyboard.instance.logicalKeysPressed;
+            final shiftPressed =
+                keys.contains(LogicalKeyboardKey.shiftLeft) ||
+                    keys.contains(LogicalKeyboardKey.shiftRight);
+            final ctrlPressed =
+                keys.contains(LogicalKeyboardKey.controlLeft) ||
+                    keys.contains(LogicalKeyboardKey.controlRight) ||
+                    keys.contains(LogicalKeyboardKey.metaLeft) ||
+                    keys.contains(LogicalKeyboardKey.metaRight);
             setState(() {
-              if (_selectedPaths.contains(entry.path)) {
-                _selectedPaths.remove(entry.path);
+              if (shiftPressed && _lastSelectedIndex != null) {
+                final start = _lastSelectedIndex!;
+                final end = index;
+                final min = start < end ? start : end;
+                final max = start < end ? end : start;
+                if (!ctrlPressed) {
+                  _selectedPaths.clear();
+                }
+                for (var i = min; i <= max; i += 1) {
+                  _selectedPaths.add(_entries[i].path);
+                }
+              } else if (ctrlPressed) {
+                if (_selectedPaths.contains(entry.path)) {
+                  _selectedPaths.remove(entry.path);
+                } else {
+                  _selectedPaths.add(entry.path);
+                }
+                _lastSelectedIndex = index;
               } else {
-                _selectedPaths.add(entry.path);
+                _selectedPaths
+                  ..clear()
+                  ..add(entry.path);
+                _lastSelectedIndex = index;
               }
             });
           },
+          onDoubleTap: entry.isDirectory
+              ? () => _loadDirectory(entry.path)
+              : null,
           onLongPress: entry.isDirectory
               ? () => _loadDirectory(entry.path)
               : null,
+          child: ListTile(
+            dense: true,
+            visualDensity: VisualDensity.compact,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+            selected: isSelected,
+            leading: Icon(
+              entry.isDirectory
+                  ? Icons.folder
+                  : Icons.insert_drive_file_outlined,
+              size: 18,
+            ),
+            title: Text(
+              entry.name,
+              overflow: TextOverflow.ellipsis,
+            ),
+            subtitle: entry.isDirectory
+                ? const Text('Folder')
+                : Text(_formatSize(entry.size)),
+            trailing: entry.isDirectory
+                ? IconButton(
+                    tooltip: 'Open',
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(Icons.arrow_forward_ios, size: 14),
+                    onPressed: () => _loadDirectory(entry.path),
+                  )
+                : null,
+          ),
         );
       },
     );
