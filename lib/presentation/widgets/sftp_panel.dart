@@ -117,10 +117,13 @@ class _SftpPanelState extends State<SftpPanel> {
     }
   }
 
-  Future<void> _loadDirectory(String path) async {
+  Future<bool> _loadDirectory(
+    String path, {
+    bool markUnavailableOnError = true,
+  }) async {
     final sessionId = _sessionId;
     if (sessionId == null) {
-      return;
+      return false;
     }
     setState(() {
       _loading = true;
@@ -131,7 +134,7 @@ class _SftpPanelState extends State<SftpPanel> {
         sessionId,
         path,
       );
-      if (!mounted) return;
+      if (!mounted) return Future.value(false);
       setState(() {
         _entries = entries;
         _currentPath = path;
@@ -144,14 +147,20 @@ class _SftpPanelState extends State<SftpPanel> {
         _available = true;
       });
       widget.onAvailabilityChanged?.call(true);
+      return true;
     } catch (error) {
-      if (!mounted) return;
+      if (!mounted) return Future.value(false);
       setState(() {
         _loading = false;
         _error = error.toString();
-        _available = false;
+        if (markUnavailableOnError) {
+          _available = false;
+        }
       });
-      widget.onAvailabilityChanged?.call(false);
+      if (markUnavailableOnError) {
+        widget.onAvailabilityChanged?.call(false);
+      }
+      return false;
     }
   }
 
@@ -167,7 +176,9 @@ class _SftpPanelState extends State<SftpPanel> {
     if (path.isEmpty || path == '/') {
       return '/';
     }
-    final trimmed = path.endsWith('/') ? path.substring(0, path.length - 1) : path;
+    final trimmed = path.endsWith('/')
+        ? path.substring(0, path.length - 1)
+        : path;
     final index = trimmed.lastIndexOf('/');
     if (index <= 0) {
       return '/';
@@ -209,8 +220,9 @@ class _SftpPanelState extends State<SftpPanel> {
     final selectedEntries = _entries
         .where((entry) => _selectedPaths.contains(entry.path))
         .toList(growable: false);
-    final filesOnly =
-        selectedEntries.where((entry) => !entry.isDirectory).toList();
+    final filesOnly = selectedEntries
+        .where((entry) => !entry.isDirectory)
+        .toList();
     if (filesOnly.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Only files can be downloaded.')),
@@ -242,15 +254,15 @@ class _SftpPanelState extends State<SftpPanel> {
       }
       if (!mounted) return;
       _finishTransfer();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Download completed.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Download completed.')));
     } catch (error) {
       if (!mounted) return;
       _finishTransfer();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Download failed: $error')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Download failed: $error')));
     }
   }
 
@@ -284,15 +296,15 @@ class _SftpPanelState extends State<SftpPanel> {
       if (!mounted) return;
       _finishTransfer();
       await _refresh();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Upload completed.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Upload completed.')));
     } catch (error) {
       if (!mounted) return;
       _finishTransfer();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Upload failed: $error')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Upload failed: $error')));
     }
   }
 
@@ -327,15 +339,15 @@ class _SftpPanelState extends State<SftpPanel> {
       if (!mounted) return;
       _finishTransfer();
       await _refresh();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Upload completed.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Upload completed.')));
     } catch (error) {
       if (!mounted) return;
       _finishTransfer();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Upload failed: $error')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Upload failed: $error')));
     }
   }
 
@@ -361,14 +373,14 @@ class _SftpPanelState extends State<SftpPanel> {
       );
       if (!mounted) return;
       await _refresh();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Folder created.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Folder created.')));
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Create folder failed: $error')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Create folder failed: $error')));
     }
   }
 
@@ -377,9 +389,11 @@ class _SftpPanelState extends State<SftpPanel> {
     if (sessionId == null || _selectedPaths.isEmpty) {
       return;
     }
-    final confirmed = await _confirmDelete(_selectedPaths.length == 1
-        ? 'Delete selected item?'
-        : 'Delete ${_selectedPaths.length} items?');
+    final confirmed = await _confirmDelete(
+      _selectedPaths.length == 1
+          ? 'Delete selected item?'
+          : 'Delete ${_selectedPaths.length} items?',
+    );
     if (confirmed != true) {
       return;
     }
@@ -387,11 +401,7 @@ class _SftpPanelState extends State<SftpPanel> {
       for (final path in _selectedPaths) {
         final entry = _entries.firstWhere(
           (item) => item.path == path,
-          orElse: () => const SftpEntry(
-            name: '',
-            path: '',
-            isDirectory: false,
-          ),
+          orElse: () => const SftpEntry(name: '', path: '', isDirectory: false),
         );
         if (entry.path.isEmpty) {
           continue;
@@ -404,14 +414,14 @@ class _SftpPanelState extends State<SftpPanel> {
       }
       if (!mounted) return;
       await _refresh();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Deleted.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Deleted.')));
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Delete failed: $error')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Delete failed: $error')));
     }
   }
 
@@ -485,10 +495,7 @@ class _SftpPanelState extends State<SftpPanel> {
           title: Text(title),
           content: TextField(
             controller: controller,
-            decoration: InputDecoration(
-              labelText: 'Name',
-              hintText: hint,
-            ),
+            decoration: InputDecoration(labelText: 'Name', hintText: hint),
             autofocus: true,
           ),
           actions: [
@@ -531,9 +538,13 @@ class _SftpPanelState extends State<SftpPanel> {
   @override
   Widget build(BuildContext context) {
     final session = widget.orchestrator.activeSession;
-    final isConnected = session?.session.status == ConnectionStateStatus.connected;
+    final isConnected =
+        session?.session.status == ConnectionStateStatus.connected;
     final path = _currentPath ?? '/';
-    if (isConnected && _sessionId != null && _currentPath == null && !_loading) {
+    if (isConnected &&
+        _sessionId != null &&
+        _currentPath == null &&
+        !_loading) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           _loadHome();
@@ -561,16 +572,17 @@ class _SftpPanelState extends State<SftpPanel> {
                   IconButton(
                     tooltip: 'New Folder',
                     visualDensity: VisualDensity.compact,
-                    onPressed:
-                        !isConnected || _loading ? null : _createFolder,
-                    icon: const Icon(Icons.create_new_folder_outlined, size: 18),
+                    onPressed: !isConnected || _loading ? null : _createFolder,
+                    icon: const Icon(
+                      Icons.create_new_folder_outlined,
+                      size: 18,
+                    ),
                   ),
                   IconButton(
                     tooltip: 'Delete',
                     visualDensity: VisualDensity.compact,
-                    onPressed: !isConnected ||
-                            _loading ||
-                            _selectedPaths.isEmpty
+                    onPressed:
+                        !isConnected || _loading || _selectedPaths.isEmpty
                         ? null
                         : _deleteSelected,
                     icon: const Icon(Icons.delete_outline, size: 18),
@@ -621,57 +633,74 @@ class _SftpPanelState extends State<SftpPanel> {
                 displayStringForOption: (option) => option,
                 fieldViewBuilder:
                     (context, controller, focusNode, onFieldSubmitted) {
-                  return TextField(
-                    controller: controller,
-                    focusNode: focusNode,
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(color: Colors.grey.shade700),
-                    decoration: const InputDecoration(
-                      isDense: true,
-                      border: OutlineInputBorder(),
-                      contentPadding:
-                          EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                    ),
-                    onTap: () => setState(() => _editingPath = true),
-                    onSubmitted: (value) {
-                      final next = value.trim();
-                      setState(() => _editingPath = false);
-                      if (next.isNotEmpty) {
-                        _loadDirectory(next);
-                      }
+                      return TextField(
+                        controller: controller,
+                        focusNode: focusNode,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.grey.shade700,
+                        ),
+                        decoration: const InputDecoration(
+                          isDense: true,
+                          border: OutlineInputBorder(),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 6,
+                          ),
+                        ),
+                        onTap: () => setState(() => _editingPath = true),
+                        onSubmitted: (value) async {
+                          final next = value.trim();
+                          setState(() => _editingPath = false);
+                          if (next.isNotEmpty) {
+                            final previous = _currentPath ?? '';
+                            final ok = await _loadDirectory(
+                              next,
+                              markUnavailableOnError: false,
+                            );
+                            if (!ok) {
+                              _pathController.text = previous;
+                            }
+                          } else {
+                            _pathController.text = _currentPath ?? '';
+                          }
+                        },
+                      );
                     },
-                  );
-                },
                 optionsViewBuilder:
                     (context, onSelected, Iterable<String> options) {
-                  return Align(
-                    alignment: Alignment.topLeft,
-                    child: Material(
-                      elevation: 4,
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 260),
-                        child: ListView.builder(
-                          padding: EdgeInsets.zero,
-                          shrinkWrap: true,
-                          itemCount: options.length,
-                          itemBuilder: (context, index) {
-                            final option = options.elementAt(index);
-                            return ListTile(
-                              dense: true,
-                              title: Text(option),
-                              onTap: () => onSelected(option),
-                            );
-                          },
+                      return Align(
+                        alignment: Alignment.topLeft,
+                        child: Material(
+                          elevation: 4,
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 260),
+                            child: ListView.builder(
+                              padding: EdgeInsets.zero,
+                              shrinkWrap: true,
+                              itemCount: options.length,
+                              itemBuilder: (context, index) {
+                                final option = options.elementAt(index);
+                                return ListTile(
+                                  dense: true,
+                                  title: Text(option),
+                                  onTap: () => onSelected(option),
+                                );
+                              },
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                  );
-                },
-                onSelected: (value) {
+                      );
+                    },
+                onSelected: (value) async {
                   setState(() => _editingPath = false);
-                  _loadDirectory(value);
+                  final previous = _currentPath ?? '';
+                  final ok = await _loadDirectory(
+                    value,
+                    markUnavailableOnError: false,
+                  );
+                  if (!ok) {
+                    _pathController.text = previous;
+                  }
                 },
               ),
               const SizedBox(height: 6),
@@ -713,9 +742,8 @@ class _SftpPanelState extends State<SftpPanel> {
                 children: [
                   IconButton(
                     tooltip: 'Download',
-                    onPressed: !isConnected ||
-                            _loading ||
-                            _selectedPaths.isEmpty
+                    onPressed:
+                        !isConnected || _loading || _selectedPaths.isEmpty
                         ? null
                         : _downloadSelected,
                     icon: const Icon(Icons.download, size: 18),
@@ -723,8 +751,9 @@ class _SftpPanelState extends State<SftpPanel> {
                   const Spacer(),
                   IconButton(
                     tooltip: 'Upload',
-                    onPressed:
-                        !isConnected || _loading ? null : _uploadFromLocal,
+                    onPressed: !isConnected || _loading
+                        ? null
+                        : _uploadFromLocal,
                     icon: const Icon(Icons.upload_file, size: 18),
                   ),
                 ],
@@ -733,28 +762,21 @@ class _SftpPanelState extends State<SftpPanel> {
           ),
         ),
         const Divider(height: 1),
-        Expanded(
-          child: _buildContent(isConnected),
-        ),
+        Expanded(child: _buildContent(isConnected)),
       ],
     );
   }
 
   Widget _buildContent(bool isConnected) {
     if (!isConnected) {
-      return const Center(
-        child: Text('Connect to a host to browse files.'),
-      );
+      return const Center(child: Text('Connect to a host to browse files.'));
     }
     if (_loading && _entries.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
     if (_error != null) {
       return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Text(_error!),
-        ),
+        child: Padding(padding: const EdgeInsets.all(12), child: Text(_error!)),
       );
     }
     if (_entries.isEmpty) {
@@ -772,12 +794,12 @@ class _SftpPanelState extends State<SftpPanel> {
             final keys = HardwareKeyboard.instance.logicalKeysPressed;
             final shiftPressed =
                 keys.contains(LogicalKeyboardKey.shiftLeft) ||
-                    keys.contains(LogicalKeyboardKey.shiftRight);
+                keys.contains(LogicalKeyboardKey.shiftRight);
             final ctrlPressed =
                 keys.contains(LogicalKeyboardKey.controlLeft) ||
-                    keys.contains(LogicalKeyboardKey.controlRight) ||
-                    keys.contains(LogicalKeyboardKey.metaLeft) ||
-                    keys.contains(LogicalKeyboardKey.metaRight);
+                keys.contains(LogicalKeyboardKey.controlRight) ||
+                keys.contains(LogicalKeyboardKey.metaLeft) ||
+                keys.contains(LogicalKeyboardKey.metaRight);
             setState(() {
               if (shiftPressed && _lastSelectedIndex != null) {
                 final start = _lastSelectedIndex!;
@@ -819,10 +841,7 @@ class _SftpPanelState extends State<SftpPanel> {
                   : Icons.insert_drive_file_outlined,
               size: 18,
             ),
-            title: Text(
-              entry.name,
-              overflow: TextOverflow.ellipsis,
-            ),
+            title: Text(entry.name, overflow: TextOverflow.ellipsis),
             subtitle: entry.isDirectory
                 ? const Text('Folder')
                 : Text(_formatSize(entry.size)),
