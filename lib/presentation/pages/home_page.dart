@@ -199,9 +199,7 @@ class _HomePageState extends State<HomePage> {
             }
           });
         }
-        final autoOpen = widget.settings.autoOpenSftpPanel;
-        final showSftpPanel =
-            (autoOpen || _sftpPanelOpen) && _sftpAvailable;
+        final showSftpPanel = _sftpPanelOpen && _sftpAvailable;
         return Scaffold(
           appBar: AppBar(
             title: const Text('small_ssh'),
