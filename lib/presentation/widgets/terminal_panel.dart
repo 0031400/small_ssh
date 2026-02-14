@@ -59,13 +59,7 @@ class _TerminalPanelState extends State<TerminalPanel> {
   @override
   Widget build(BuildContext context) {
     if (widget.sessions.isEmpty) {
-      final textTheme = Theme.of(context).textTheme;
-      return Center(
-        child: Text(
-          'No active session. Choose a host and connect.',
-          style: textTheme.bodyMedium,
-        ),
-      );
+      return const SizedBox.shrink();
     }
 
     final active = widget.sessions.firstWhere(
@@ -112,11 +106,11 @@ class _TerminalPanelState extends State<TerminalPanel> {
               width: double.infinity,
               decoration: BoxDecoration(
                 color: const Color(0xFF0B1220),
-                  borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: Theme.of(context).dividerColor),
               ),
               child: ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(10),
                 child: TerminalView(
                   terminal,
                   hardwareKeyboardOnly: true,
@@ -161,23 +155,6 @@ class _TerminalPanelState extends State<TerminalPanel> {
                 ),
               ),
             ),
-          ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Direct terminal input enabled. Press Enter to send command.',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ),
-              IconButton(
-                tooltip: 'Delete session',
-                visualDensity: VisualDensity.compact,
-                onPressed: () => widget.onDeleteSession(active.session.id),
-                icon: const Icon(Icons.delete_outline),
-              ),
-            ],
           ),
         ],
       ),

@@ -390,10 +390,6 @@ class _HostListPanel extends StatelessWidget {
               },
             ),
           ),
-          const SizedBox(height: 4),
-          const Text(
-            'Using dartssh2 backend. Host key trust flow will be added next.',
-          ),
         ],
       ),
     );

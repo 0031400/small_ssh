@@ -168,7 +168,6 @@ class _SettingsPageState extends State<SettingsPage> {
                 child: SwitchListTile(
                   secondary: const Icon(Icons.folder_outlined),
                   title: const Text('SFTP 面板'),
-                  subtitle: const Text('自动显示右侧 SFTP 面板'),
                   dense: true,
                   value: widget.settings.autoOpenSftpPanel,
                   onChanged: widget.settings.setAutoOpenSftpPanel,
@@ -181,7 +180,6 @@ class _SettingsPageState extends State<SettingsPage> {
                     const ListTile(
                       leading: Icon(Icons.content_copy_outlined),
                       title: Text('复制/粘贴'),
-                      subtitle: Text('右键行为'),
                     ),
                     RadioGroup<ClipboardBehavior>(
                       groupValue: widget.settings.clipboardBehavior,
@@ -299,7 +297,6 @@ class _SettingsPageState extends State<SettingsPage> {
                 child: ListTile(
                   leading: Icon(Icons.info_outline),
                   title: Text('small_ssh'),
-                  subtitle: Text('Lightweight SSH client'),
                 ),
               ),
             ],
