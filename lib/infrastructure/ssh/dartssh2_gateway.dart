@@ -26,21 +26,40 @@ class DartSsh2Gateway implements SshGateway {
     }
 
     final interactivePassword = request.keyboardInteractivePassword;
+    final onKeyboardInteractive = request.onKeyboardInteractive;
 
     final client = SSHClient(
       socket,
       username: request.username,
       identities: identities,
       onPasswordRequest: passwordProvider,
-      onUserInfoRequest: interactivePassword == null
-          ? null
-          : (request) {
-              final value = interactivePassword.trim();
-              if (value.isEmpty) {
-                return null;
-              }
-              return List<String>.filled(request.prompts.length, value);
-            },
+      onUserInfoRequest: (userInfoRequest) async {
+        if (onKeyboardInteractive != null) {
+          final responses = await onKeyboardInteractive(
+            KeyboardInteractiveRequest(
+              name: userInfoRequest.name,
+              instruction: userInfoRequest.instruction,
+              prompts: userInfoRequest.prompts
+                  .map(
+                    (item) => KeyboardInteractivePrompt(
+                      promptText: item.promptText,
+                      echo: item.echo,
+                    ),
+                  )
+                  .toList(growable: false),
+            ),
+          );
+          return responses;
+        }
+        if (interactivePassword == null) {
+          return null;
+        }
+        final value = interactivePassword.trim();
+        if (value.isEmpty) {
+          return null;
+        }
+        return List<String>.filled(userInfoRequest.prompts.length, value);
+      },
       // TODO: replace this with known_hosts verification flow.
       onVerifyHostKey: (keyType, fingerprint) => true,
     );

@@ -4,6 +4,7 @@ import 'package:small_ssh/application/services/session_orchestrator.dart';
 import 'package:small_ssh/domain/models/credential_ref.dart';
 import 'package:small_ssh/domain/models/host_profile.dart';
 import 'package:small_ssh/domain/repositories/credential_repository.dart';
+import 'package:small_ssh/infrastructure/ssh/ssh_gateway.dart';
 import 'package:small_ssh/presentation/widgets/host_form_dialog.dart';
 import 'package:small_ssh/presentation/widgets/password_prompt_dialog.dart';
 import 'package:small_ssh/presentation/widgets/sftp_panel.dart';
@@ -104,10 +105,8 @@ class _HomePageState extends State<HomePage> {
     }
     final result = await showDialog<HostFormResult>(
       context: context,
-      builder: (context) => HostFormDialog(
-        initialHost: host,
-        initialPassword: initialPassword,
-      ),
+      builder: (context) =>
+          HostFormDialog(initialHost: host, initialPassword: initialPassword),
     );
 
     if (!mounted || result == null) {
@@ -155,7 +154,90 @@ class _HomePageState extends State<HomePage> {
     await widget.orchestrator.connectToHost(
       host.id,
       passwordOverride: override,
+      onKeyboardInteractive: _promptKeyboardInteractive,
     );
+  }
+
+  Future<List<String>?> _promptKeyboardInteractive(
+    KeyboardInteractiveRequest request,
+  ) async {
+    if (!mounted) {
+      return null;
+    }
+    final hasName = request.name.trim().isNotEmpty;
+    final hasInstruction = request.instruction.trim().isNotEmpty;
+    final hasPromptText = request.prompts.any(
+      (item) => item.promptText.trim().isNotEmpty,
+    );
+    if (!hasName && !hasInstruction && !hasPromptText) {
+      return [];
+    }
+    final controllers = List<TextEditingController>.generate(
+      request.prompts.length,
+      (_) => TextEditingController(),
+      growable: false,
+    );
+    try {
+      return await showDialog<List<String>>(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: Text(
+              request.name.trim().isEmpty
+                  ? 'Interactive Verification'
+                  : request.name,
+            ),
+            content: SizedBox(
+              width: 420,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      request.instruction.trim().isEmpty
+                          ? 'Please complete interactive verification.'
+                          : request.instruction,
+                    ),
+                    const SizedBox(height: 10),
+                    for (var i = 0; i < request.prompts.length; i += 1) ...[
+                      Text(
+                        request.prompts[i].promptText.trim().isEmpty
+                            ? 'Prompt ${i + 1}'
+                            : request.prompts[i].promptText,
+                      ),
+                      const SizedBox(height: 4),
+                      TextField(
+                        controller: controllers[i],
+                        obscureText: !request.prompts[i].echo,
+                      ),
+                      if (i < request.prompts.length - 1)
+                        const SizedBox(height: 10),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(null),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(
+                  controllers.map((item) => item.text).toList(growable: false),
+                ),
+                child: const Text('Submit'),
+              ),
+            ],
+          );
+        },
+      );
+    } finally {
+      for (final controller in controllers) {
+        controller.dispose();
+      }
+    }
   }
 
   void _openSettings() {

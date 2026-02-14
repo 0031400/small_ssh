@@ -2,6 +2,31 @@ import 'dart:async';
 
 import 'package:small_ssh/domain/models/sftp_entry.dart';
 
+class KeyboardInteractivePrompt {
+  const KeyboardInteractivePrompt({
+    required this.promptText,
+    required this.echo,
+  });
+
+  final String promptText;
+  final bool echo;
+}
+
+class KeyboardInteractiveRequest {
+  const KeyboardInteractiveRequest({
+    required this.name,
+    required this.instruction,
+    required this.prompts,
+  });
+
+  final String name;
+  final String instruction;
+  final List<KeyboardInteractivePrompt> prompts;
+}
+
+typedef KeyboardInteractiveHandler =
+    Future<List<String>?> Function(KeyboardInteractiveRequest request);
+
 class SshConnectRequest {
   const SshConnectRequest({
     required this.host,
@@ -11,6 +36,7 @@ class SshConnectRequest {
     this.privateKey,
     this.privateKeyPassphrase,
     this.keyboardInteractivePassword,
+    this.onKeyboardInteractive,
   });
 
   final String host;
@@ -20,6 +46,7 @@ class SshConnectRequest {
   final String? privateKey;
   final String? privateKeyPassphrase;
   final String? keyboardInteractivePassword;
+  final KeyboardInteractiveHandler? onKeyboardInteractive;
 }
 
 abstract class SshConnection {

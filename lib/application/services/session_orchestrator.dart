@@ -117,7 +117,11 @@ class SessionOrchestrator extends ChangeNotifier {
     return secret == null || secret.trim().isEmpty;
   }
 
-  Future<void> connectToHost(String hostId, {String? passwordOverride}) async {
+  Future<void> connectToHost(
+    String hostId, {
+    String? passwordOverride,
+    KeyboardInteractiveHandler? onKeyboardInteractive,
+  }) async {
     final host = await _hostRepository.findById(hostId);
 
     if (host == null) {
@@ -161,6 +165,7 @@ class SessionOrchestrator extends ChangeNotifier {
         privateKey: keyMaterial?.privateKey,
         privateKeyPassphrase: keyMaterial?.passphrase,
         keyboardInteractivePassword: hasPassword ? password : null,
+        onKeyboardInteractive: onKeyboardInteractive,
       );
       final connection = await _sshGateway.connect(request);
 
