@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:small_ssh/app/settings.dart';
 import 'package:small_ssh/application/services/session_orchestrator.dart';
-import 'package:small_ssh/presentation/pages/home_page.dart';
+import 'package:small_ssh/domain/models/connection_state_status.dart';
 import 'package:xterm/xterm.dart';
 
 class TerminalPanel extends StatefulWidget {
@@ -81,7 +81,7 @@ class _TerminalPanelState extends State<TerminalPanel> {
       child: Column(
         children: [
           SizedBox(
-            height: 34,
+            height: 30,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: widget.sessions.length,
@@ -91,9 +91,15 @@ class _TerminalPanelState extends State<TerminalPanel> {
                 final selected = session.session.id == active.session.id;
                 return InputChip(
                   selected: selected,
+                  showCheckmark: false,
+                  avatar: Icon(_statusIcon(session.session.status), size: 14),
                   label: Text(
-                    '${session.hostProfile.name} (${statusLabel(session.session.status)})',
+                    session.hostProfile.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
+                  visualDensity: VisualDensity.compact,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   onSelected: (_) => widget.onSelectSession(session.session.id),
                   onDeleted: () => widget.onDeleteSession(session.session.id),
                 );
@@ -245,6 +251,23 @@ class _TerminalPanelState extends State<TerminalPanel> {
 
     _lastSyncedGridSize[sessionId] = next;
     widget.onResizeTerminal(sessionId, width, height);
+  }
+
+  IconData _statusIcon(ConnectionStateStatus status) {
+    switch (status) {
+      case ConnectionStateStatus.idle:
+        return Icons.pause_circle_outline;
+      case ConnectionStateStatus.connecting:
+        return Icons.autorenew;
+      case ConnectionStateStatus.connected:
+        return Icons.check_circle_outline;
+      case ConnectionStateStatus.reconnecting:
+        return Icons.sync;
+      case ConnectionStateStatus.disconnected:
+        return Icons.link_off;
+      case ConnectionStateStatus.error:
+        return Icons.error_outline;
+    }
   }
 
   Future<void> _handleTerminalSecondaryTap(
