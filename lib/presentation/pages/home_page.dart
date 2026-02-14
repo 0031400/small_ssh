@@ -252,11 +252,14 @@ class _HomePageState extends State<HomePage> {
                         child: Card(
                           child: TerminalPanel(
                             sessions: widget.orchestrator.sessions,
-                            activeSessionId: widget.orchestrator.activeSessionId,
-                            onSelectSession: widget.orchestrator.setActiveSession,
+                            activeSessionId:
+                                widget.orchestrator.activeSessionId,
+                            onSelectSession:
+                                widget.orchestrator.setActiveSession,
                             onDeleteSession: widget.orchestrator.removeSession,
                             onSendInput: widget.orchestrator.sendInput,
-                            onResizeTerminal: widget.orchestrator.resizeTerminal,
+                            onResizeTerminal:
+                                widget.orchestrator.resizeTerminal,
                             settings: widget.settings,
                           ),
                         ),
@@ -274,15 +277,14 @@ class _HomePageState extends State<HomePage> {
                                 if (available == _sftpAvailable) {
                                   return;
                                 }
-                                WidgetsBinding.instance.addPostFrameCallback(
-                                  (_) {
-                                    if (!mounted ||
-                                        available == _sftpAvailable) {
-                                      return;
-                                    }
-                                    setState(() => _sftpAvailable = available);
-                                  },
-                                );
+                                WidgetsBinding.instance.addPostFrameCallback((
+                                  _,
+                                ) {
+                                  if (!mounted || available == _sftpAvailable) {
+                                    return;
+                                  }
+                                  setState(() => _sftpAvailable = available);
+                                });
                               },
                             ),
                           ),
@@ -331,7 +333,10 @@ class _HostListPanel extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text('Hosts', style: Theme.of(context).textTheme.titleMedium),
+                child: Text(
+                  'Hosts',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
               ),
               IconButton(
                 tooltip: 'Add Host',
@@ -349,42 +354,34 @@ class _HostListPanel extends StatelessWidget {
               itemBuilder: (context, index) {
                 final host = hosts[index];
                 return Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  child: ListTile(
+                    dense: true,
+                    minLeadingWidth: 0,
+                    title: Text(
+                      host.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    trailing: Wrap(
+                      spacing: 0,
                       children: [
-                        Text(
-                          host.name,
-                          style: Theme.of(context).textTheme.titleMedium,
+                        IconButton(
+                          tooltip: 'Connect',
+                          visualDensity: VisualDensity.compact,
+                          onPressed: () => onConnect(host),
+                          icon: const Icon(Icons.link_outlined),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${host.username}@${host.host}:${host.port}',
-                          style: Theme.of(context).textTheme.bodySmall,
+                        IconButton(
+                          onPressed: () => onEditHost(host),
+                          tooltip: 'Edit host',
+                          visualDensity: VisualDensity.compact,
+                          icon: const Icon(Icons.edit_outlined),
                         ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            IconButton(
-                              tooltip: 'Connect',
-                              visualDensity: VisualDensity.compact,
-                              onPressed: () => onConnect(host),
-                              icon: const Icon(Icons.link_outlined),
-                            ),
-                            IconButton(
-                              onPressed: () => onEditHost(host),
-                              tooltip: 'Edit host',
-                              visualDensity: VisualDensity.compact,
-                              icon: const Icon(Icons.edit_outlined),
-                            ),
-                            IconButton(
-                              onPressed: () => onDeleteHost(host),
-                              tooltip: 'Delete host',
-                              visualDensity: VisualDensity.compact,
-                              icon: const Icon(Icons.delete_outline),
-                            ),
-                          ],
+                        IconButton(
+                          onPressed: () => onDeleteHost(host),
+                          tooltip: 'Delete host',
+                          visualDensity: VisualDensity.compact,
+                          icon: const Icon(Icons.delete_outline),
                         ),
                       ],
                     ),
