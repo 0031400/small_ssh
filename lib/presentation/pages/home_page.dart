@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:small_ssh/app/settings.dart';
 import 'package:small_ssh/application/services/session_orchestrator.dart';
 import 'package:small_ssh/domain/models/auth_method.dart';
-import 'package:small_ssh/domain/models/connection_state_status.dart';
 import 'package:small_ssh/domain/models/host_profile.dart';
 import 'package:small_ssh/domain/repositories/credential_repository.dart';
 import 'package:small_ssh/presentation/widgets/host_form_dialog.dart';
@@ -393,22 +392,5 @@ class _HostListPanel extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-String statusLabel(ConnectionStateStatus status) {
-  switch (status) {
-    case ConnectionStateStatus.idle:
-      return 'Idle';
-    case ConnectionStateStatus.connecting:
-      return 'Connecting';
-    case ConnectionStateStatus.connected:
-      return 'Connected';
-    case ConnectionStateStatus.reconnecting:
-      return 'Reconnecting';
-    case ConnectionStateStatus.disconnected:
-      return 'Disconnected';
-    case ConnectionStateStatus.error:
-      return 'Error';
   }
 }
