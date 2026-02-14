@@ -28,10 +28,18 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  static const double _splitterWidth = 8;
+  static const double _minHostWidth = 220;
+  static const double _minTerminalWidth = 360;
+  static const double _minSftpWidth = 220;
+
   bool _sftpAvailable = true;
   bool _sftpPanelOpen = true;
   String? _lastSessionId;
   bool? _lastAutoOpen;
+  double _hostPanelWidth = 280;
+  double _terminalPanelWidth = 640;
+  double _sftpPanelWidth = 250;
 
   @override
   void initState() {
@@ -251,6 +259,99 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  _PaneWidths _resolvePaneWidths(double totalWidth, bool showSftpPanel) {
+    final splitterTotal = showSftpPanel ? _splitterWidth * 2 : _splitterWidth;
+    final paneTotal = (totalWidth - splitterTotal).clamp(0.0, double.infinity);
+    if (paneTotal <= 0) {
+      return const _PaneWidths(host: 0, terminal: 0, sftp: 0);
+    }
+
+    if (!showSftpPanel) {
+      var host = _hostPanelWidth;
+      if (paneTotal >= _minHostWidth + _minTerminalWidth) {
+        final maxHost = paneTotal - _minTerminalWidth;
+        host = host.clamp(_minHostWidth, maxHost);
+      } else {
+        host = paneTotal * 0.4;
+      }
+      return _PaneWidths(host: host, terminal: paneTotal - host, sftp: 0);
+    }
+
+    final minSum = _minHostWidth + _minTerminalWidth + _minSftpWidth;
+    if (paneTotal <= minSum) {
+      final host = paneTotal * (_minHostWidth / minSum);
+      final terminal = paneTotal * (_minTerminalWidth / minSum);
+      return _PaneWidths(host: host, terminal: terminal, sftp: paneTotal - host - terminal);
+    }
+
+    var host = _hostPanelWidth.clamp(
+      _minHostWidth,
+      paneTotal - _minTerminalWidth - _minSftpWidth,
+    );
+    var terminal = _terminalPanelWidth.clamp(
+      _minTerminalWidth,
+      paneTotal - host - _minSftpWidth,
+    );
+    var sftp = paneTotal - host - terminal;
+    if (sftp < _minSftpWidth) {
+      final need = _minSftpWidth - sftp;
+      final terminalCanShrink = terminal - _minTerminalWidth;
+      if (terminalCanShrink >= need) {
+        terminal -= need;
+      } else {
+        terminal = _minTerminalWidth;
+        host -= need - terminalCanShrink;
+      }
+      host = host.clamp(_minHostWidth, paneTotal - _minTerminalWidth - _minSftpWidth);
+      sftp = paneTotal - host - terminal;
+    }
+
+    return _PaneWidths(host: host, terminal: terminal, sftp: sftp);
+  }
+
+  void _resizeHostPanel(double delta, double totalWidth, bool showSftpPanel) {
+    final widths = _resolvePaneWidths(totalWidth, showSftpPanel);
+    final splitterTotal = showSftpPanel ? _splitterWidth * 2 : _splitterWidth;
+    final paneTotal = totalWidth - splitterTotal;
+    final maxHost = showSftpPanel
+        ? paneTotal - _minTerminalWidth - _minSftpWidth
+        : paneTotal - _minTerminalWidth;
+    setState(() {
+      _hostPanelWidth = (widths.host + delta).clamp(_minHostWidth, maxHost);
+    });
+  }
+
+  void _resizeTerminalPanel(double delta, double totalWidth) {
+    final widths = _resolvePaneWidths(totalWidth, true);
+    final paneTotal = totalWidth - (_splitterWidth * 2);
+    final maxTerminal = paneTotal - widths.host - _minSftpWidth;
+    setState(() {
+      _terminalPanelWidth = (widths.terminal + delta).clamp(_minTerminalWidth, maxTerminal);
+    });
+  }
+
+  Widget _buildWidthSplitter(void Function(double delta) onDrag) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.resizeColumn,
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onHorizontalDragUpdate: (details) => onDrag(details.delta.dx),
+        child: SizedBox(
+          width: _splitterWidth,
+          child: Center(
+            child: Container(
+              width: 2,
+              decoration: BoxDecoration(
+                color: Theme.of(context).dividerColor,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -306,77 +407,91 @@ class _HomePageState extends State<HomePage> {
           ),
           body: Padding(
             padding: const EdgeInsets.all(8),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 280,
-                  child: Card(
-                    child: _HostListPanel(
-                      loading: widget.orchestrator.loadingHosts,
-                      hosts: widget.orchestrator.hosts,
-                      onConnect: _connectToHost,
-                      onAddHost: _openHostDialog,
-                      onEditHost: _openEditHostDialog,
-                      onDeleteHost: _confirmDeleteHost,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final widths = _resolvePaneWidths(constraints.maxWidth, showSftpPanel);
+                return Row(
+                  children: [
+                    SizedBox(
+                      width: widths.host,
+                      child: Card(
+                        child: _HostListPanel(
+                          loading: widget.orchestrator.loadingHosts,
+                          hosts: widget.orchestrator.hosts,
+                          onConnect: _connectToHost,
+                          onAddHost: _openHostDialog,
+                          onEditHost: _openEditHostDialog,
+                          onDeleteHost: _confirmDeleteHost,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Row(
-                    children: [
-                      Expanded(
+                    _buildWidthSplitter(
+                      (delta) => _resizeHostPanel(
+                        delta,
+                        constraints.maxWidth,
+                        showSftpPanel,
+                      ),
+                    ),
+                    SizedBox(
+                      width: widths.terminal,
+                      child: Card(
+                        child: TerminalPanel(
+                          sessions: widget.orchestrator.sessions,
+                          activeSessionId: widget.orchestrator.activeSessionId,
+                          onSelectSession: widget.orchestrator.setActiveSession,
+                          onDeleteSession: widget.orchestrator.removeSession,
+                          onSendInput: widget.orchestrator.sendInput,
+                          onResizeTerminal: widget.orchestrator.resizeTerminal,
+                          settings: widget.settings,
+                        ),
+                      ),
+                    ),
+                    if (showSftpPanel) ...[
+                      _buildWidthSplitter(
+                        (delta) => _resizeTerminalPanel(delta, constraints.maxWidth),
+                      ),
+                      SizedBox(
+                        width: widths.sftp,
                         child: Card(
-                          child: TerminalPanel(
-                            sessions: widget.orchestrator.sessions,
-                            activeSessionId:
-                                widget.orchestrator.activeSessionId,
-                            onSelectSession:
-                                widget.orchestrator.setActiveSession,
-                            onDeleteSession: widget.orchestrator.removeSession,
-                            onSendInput: widget.orchestrator.sendInput,
-                            onResizeTerminal:
-                                widget.orchestrator.resizeTerminal,
-                            settings: widget.settings,
+                          child: SftpPanel(
+                            orchestrator: widget.orchestrator,
+                            activeSessionId: widget.orchestrator.activeSessionId,
+                            onAvailabilityChanged: (available) {
+                              if (available == _sftpAvailable) {
+                                return;
+                              }
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                if (!mounted || available == _sftpAvailable) {
+                                  return;
+                                }
+                                setState(() => _sftpAvailable = available);
+                              });
+                            },
                           ),
                         ),
                       ),
-                      if (showSftpPanel) ...[
-                        const SizedBox(width: 8),
-                        SizedBox(
-                          width: 250,
-                          child: Card(
-                            child: SftpPanel(
-                              orchestrator: widget.orchestrator,
-                              activeSessionId:
-                                  widget.orchestrator.activeSessionId,
-                              onAvailabilityChanged: (available) {
-                                if (available == _sftpAvailable) {
-                                  return;
-                                }
-                                WidgetsBinding.instance.addPostFrameCallback((
-                                  _,
-                                ) {
-                                  if (!mounted || available == _sftpAvailable) {
-                                    return;
-                                  }
-                                  setState(() => _sftpAvailable = available);
-                                });
-                              },
-                            ),
-                          ),
-                        ),
-                      ],
                     ],
-                  ),
-                ),
-              ],
+                  ],
+                );
+              },
             ),
           ),
         );
       },
     );
   }
+}
+
+class _PaneWidths {
+  const _PaneWidths({
+    required this.host,
+    required this.terminal,
+    required this.sftp,
+  });
+
+  final double host;
+  final double terminal;
+  final double sftp;
 }
 
 class _HostListPanel extends StatelessWidget {
