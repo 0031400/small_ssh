@@ -146,11 +146,7 @@ class _TerminalPanelState extends State<TerminalPanel> {
                   padding: const EdgeInsets.all(8),
                   autofocus: true,
                   onSecondaryTapUp: (details, _) {
-                    _handleTerminalSecondaryTap(
-                      details,
-                      terminal,
-                      controller,
-                    );
+                    _handleTerminalSecondaryTap(details, terminal, controller);
                   },
                 ),
               ),
@@ -253,8 +249,9 @@ class _TerminalPanelState extends State<TerminalPanel> {
     TerminalController controller,
   ) async {
     final selection = controller.selection;
-    final selectedText =
-        selection == null ? null : terminal.buffer.getText(selection);
+    final selectedText = selection == null
+        ? null
+        : terminal.buffer.getText(selection);
     final hasSelection = selectedText != null && selectedText.isNotEmpty;
 
     if (widget.settings.clipboardBehavior == ClipboardBehavior.direct) {
@@ -271,8 +268,7 @@ class _TerminalPanelState extends State<TerminalPanel> {
       return;
     }
 
-    final overlay =
-        Overlay.of(context).context.findRenderObject() as RenderBox;
+    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
     final position = RelativeRect.fromRect(
       Rect.fromPoints(details.globalPosition, details.globalPosition),
       Offset.zero & overlay.size,

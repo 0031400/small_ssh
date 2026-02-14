@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:small_ssh/app/settings.dart';
 import 'package:small_ssh/domain/models/credential_ref.dart';
 import 'package:small_ssh/domain/repositories/credential_repository.dart';
-import 'package:small_ssh/presentation/widgets/auth_order_editor.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({
@@ -93,9 +92,7 @@ class _SettingsPageState extends State<SettingsPage> {
       animation: widget.settings,
       builder: (context, _) {
         return Scaffold(
-          appBar: AppBar(
-            title: const Text('设置'),
-          ),
+          appBar: AppBar(title: const Text('设置')),
           body: ListView(
             padding: const EdgeInsets.all(10),
             children: [
@@ -151,8 +148,9 @@ class _SettingsPageState extends State<SettingsPage> {
                         min: 10,
                         max: 22,
                         divisions: 12,
-                        label: widget.settings.terminalFontSize
-                            .toStringAsFixed(0),
+                        label: widget.settings.terminalFontSize.toStringAsFixed(
+                          0,
+                        ),
                         onChanged: widget.settings.setTerminalFontSize,
                       ),
                       Text(
@@ -207,32 +205,6 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
               ),
               const SizedBox(height: 10),
-              Text('认证顺序', style: textTheme.titleMedium),
-              const SizedBox(height: 6),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(10),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Row(
-                        children: [
-                          Icon(Icons.vpn_key_outlined),
-                          SizedBox(width: 8),
-                          Text('全局认证顺序'),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      AuthOrderEditor(
-                        order: widget.settings.authOrder,
-                        onChanged: widget.settings.setAuthOrder,
-                        height: 180,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
               Text('全局私钥', style: textTheme.titleMedium),
               const SizedBox(height: 6),
               Card(
@@ -265,15 +237,16 @@ class _SettingsPageState extends State<SettingsPage> {
                       Row(
                         children: [
                           FilledButton(
-                            onPressed:
-                                _loadingKey || _savingKey ? null : _saveGlobalKey,
-                            child:
-                                Text(_savingKey ? 'Saving...' : 'Save Key'),
+                            onPressed: _loadingKey || _savingKey
+                                ? null
+                                : _saveGlobalKey,
+                            child: Text(_savingKey ? 'Saving...' : 'Save Key'),
                           ),
                           const SizedBox(width: 8),
                           OutlinedButton(
-                            onPressed:
-                                _loadingKey || _savingKey ? null : _clearGlobalKey,
+                            onPressed: _loadingKey || _savingKey
+                                ? null
+                                : _clearGlobalKey,
                             child: const Text('Clear'),
                           ),
                           const SizedBox(width: 8),

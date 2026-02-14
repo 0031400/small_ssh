@@ -5,10 +5,7 @@ ThemeData buildAppTheme() {
     seedColor: const Color(0xFF3B4B5A),
     brightness: Brightness.light,
   );
-  final base = ThemeData(
-    useMaterial3: true,
-    colorScheme: scheme,
-  );
+  final base = ThemeData(useMaterial3: true, colorScheme: scheme);
 
   final textTheme = base.textTheme.copyWith(
     titleLarge: base.textTheme.titleLarge?.copyWith(
@@ -117,10 +114,7 @@ ThemeData buildAppDarkTheme() {
     seedColor: const Color(0xFF3B4B5A),
     brightness: Brightness.dark,
   );
-  final base = ThemeData(
-    useMaterial3: true,
-    colorScheme: scheme,
-  );
+  final base = ThemeData(useMaterial3: true, colorScheme: scheme);
   final textTheme = base.textTheme.copyWith(
     titleLarge: base.textTheme.titleLarge?.copyWith(
       fontWeight: FontWeight.w600,

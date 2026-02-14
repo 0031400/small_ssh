@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:small_ssh/domain/models/auth_method.dart';
 import 'package:small_ssh/domain/models/connection_state_status.dart';
 import 'package:small_ssh/domain/models/credential_ref.dart';
 import 'package:small_ssh/domain/models/host_profile.dart';
@@ -99,25 +98,14 @@ class SessionOrchestrator extends ChangeNotifier {
     return secret != null && secret.trim().isNotEmpty;
   }
 
-  Future<bool> needsPasswordForHost(
-    String hostId, {
-    List<AuthMethod>? authOrder,
-  }) async {
+  Future<bool> needsPasswordForHost(String hostId) async {
     final host = await _hostRepository.findById(hostId);
     if (host == null) {
       return false;
     }
 
     final keyMaterial = await _loadPrivateKeyForHost(host);
-    final order = _normalizeAuthOrder(authOrder ?? host.authOrder);
-    if (order.contains(AuthMethod.privateKey) && keyMaterial != null) {
-      return false;
-    }
-
-    final needsPassword =
-        order.contains(AuthMethod.password) ||
-        order.contains(AuthMethod.keyboardInteractive);
-    if (!needsPassword) {
+    if (keyMaterial != null) {
       return false;
     }
 
@@ -129,11 +117,7 @@ class SessionOrchestrator extends ChangeNotifier {
     return secret == null || secret.trim().isEmpty;
   }
 
-  Future<void> connectToHost(
-    String hostId, {
-    String? passwordOverride,
-    List<AuthMethod>? authOrder,
-  }) async {
+  Future<void> connectToHost(String hostId, {String? passwordOverride}) async {
     final host = await _hostRepository.findById(hostId);
 
     if (host == null) {
@@ -165,20 +149,20 @@ class SessionOrchestrator extends ChangeNotifier {
       );
       final storedPassword = await _credentialRepository.readSecret(credential);
       final override = passwordOverride?.trim();
-      final password =
-          (override != null && override.isNotEmpty)
-              ? override
-              : storedPassword?.trim();
+      final password = (override != null && override.isNotEmpty)
+          ? override
+          : storedPassword?.trim();
       final hasPassword = password != null && password.isNotEmpty;
-      final order = _normalizeAuthOrder(authOrder ?? host.authOrder);
-      final connection = await _connectWithAuthOrder(
-        host: host,
-        authOrder: order,
+      final request = SshConnectRequest(
+        host: host.host,
+        port: host.port,
+        username: host.username,
         password: hasPassword ? password : null,
         privateKey: keyMaterial?.privateKey,
         privateKeyPassphrase: keyMaterial?.passphrase,
-        pending: pendingManaged,
+        keyboardInteractivePassword: hasPassword ? password : null,
       );
+      final connection = await _sshGateway.connect(request);
 
       if ((storedPassword == null || storedPassword.trim().isEmpty) &&
           override != null &&
@@ -238,8 +222,6 @@ class SessionOrchestrator extends ChangeNotifier {
     required PrivateKeyMode privateKeyMode,
     String? privateKey,
     String? privateKeyPassphrase,
-    required AuthOrderMode authOrderMode,
-    required List<AuthMethod> authOrder,
   }) async {
     final normalizedName = name.trim();
     final normalizedHost = host.trim();
@@ -262,8 +244,6 @@ class SessionOrchestrator extends ChangeNotifier {
       port: port,
       username: normalizedUser,
       privateKeyMode: privateKeyMode,
-      authOrderMode: authOrderMode,
-      authOrder: _normalizeAuthOrder(authOrder),
     );
 
     await _hostRepository.save(profile);
@@ -298,8 +278,6 @@ class SessionOrchestrator extends ChangeNotifier {
     required PrivateKeyMode privateKeyMode,
     String? privateKey,
     String? privateKeyPassphrase,
-    required AuthOrderMode authOrderMode,
-    required List<AuthMethod> authOrder,
   }) async {
     final normalizedName = name.trim();
     final normalizedHost = host.trim();
@@ -327,8 +305,6 @@ class SessionOrchestrator extends ChangeNotifier {
       port: port,
       username: normalizedUser,
       privateKeyMode: privateKeyMode,
-      authOrderMode: authOrderMode,
-      authOrder: _normalizeAuthOrder(authOrder),
     );
 
     await _hostRepository.save(updated);
@@ -567,7 +543,10 @@ class SessionOrchestrator extends ChangeNotifier {
       return null;
     }
     final passphrase = await _credentialRepository.readSecret(
-      CredentialRef(id: passphraseId, kind: CredentialKind.privateKeyPassphrase),
+      CredentialRef(
+        id: passphraseId,
+        kind: CredentialKind.privateKeyPassphrase,
+      ),
     );
     return _PrivateKeyMaterial(
       privateKey: key,
@@ -604,76 +583,6 @@ class SessionOrchestrator extends ChangeNotifier {
         passphrase!,
       );
     }
-  }
-
-  List<AuthMethod> _normalizeAuthOrder(List<AuthMethod> order) {
-    final normalized = <AuthMethod>[];
-    for (final method in order) {
-      if (!normalized.contains(method)) {
-        normalized.add(method);
-      }
-    }
-    if (normalized.isEmpty) {
-      return List<AuthMethod>.of(defaultAuthOrder);
-    }
-    return normalized;
-  }
-
-  Future<SshConnection> _connectWithAuthOrder({
-    required HostProfile host,
-    required List<AuthMethod> authOrder,
-    required _ManagedSession pending,
-    String? password,
-    String? privateKey,
-    String? privateKeyPassphrase,
-  }) async {
-    if (authOrder.isEmpty) {
-      throw StateError('No authentication methods configured.');
-    }
-
-    Object? lastError;
-    var attempted = false;
-    for (final method in authOrder) {
-      final label = authMethodLabel(method);
-      if (method == AuthMethod.privateKey &&
-          (privateKey == null || privateKey.trim().isEmpty)) {
-        pending.output.add('Skipping $label (no private key).\r\n');
-        continue;
-      }
-      if ((method == AuthMethod.password ||
-              method == AuthMethod.keyboardInteractive) &&
-          (password == null || password.trim().isEmpty)) {
-        pending.output.add('Skipping $label (no password).\r\n');
-        continue;
-      }
-
-      pending.output.add('Trying $label authentication...\r\n');
-      notifyListeners();
-      attempted = true;
-      try {
-        final request = SshConnectRequest(
-          host: host.host,
-          port: host.port,
-          username: host.username,
-          authMethod: method,
-          password: method == AuthMethod.password ? password : null,
-          privateKey: method == AuthMethod.privateKey ? privateKey : null,
-          privateKeyPassphrase:
-              method == AuthMethod.privateKey ? privateKeyPassphrase : null,
-          keyboardInteractivePassword:
-              method == AuthMethod.keyboardInteractive ? password : null,
-        );
-        return await _sshGateway.connect(request);
-      } catch (error) {
-        lastError = error;
-        pending.output.add('Auth failed ($label): $error\r\n');
-        notifyListeners();
-      }
-    }
-    if (!attempted) {
-      throw StateError('No authentication methods available.');
-    }
-    throw lastError ?? StateError('Authentication failed.');
   }
 }
 

@@ -58,10 +58,7 @@ class _PasswordPromptDialogState extends State<PasswordPromptDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Cancel'),
         ),
-        FilledButton(
-          onPressed: _submit,
-          child: const Text('Connect'),
-        ),
+        FilledButton(onPressed: _submit, child: const Text('Connect')),
       ],
     );
   }

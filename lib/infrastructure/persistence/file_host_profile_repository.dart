@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:small_ssh/domain/models/auth_method.dart';
 import 'package:small_ssh/domain/models/host_profile.dart';
 import 'package:small_ssh/domain/repositories/host_profile_repository.dart';
 
@@ -19,8 +18,6 @@ class FileHostProfileRepository implements HostProfileRepository {
       port: 22,
       username: 'developer',
       privateKeyMode: PrivateKeyMode.global,
-      authOrderMode: AuthOrderMode.global,
-      authOrder: defaultAuthOrder,
     ),
     HostProfile(
       id: 'demo-box',
@@ -29,8 +26,6 @@ class FileHostProfileRepository implements HostProfileRepository {
       port: 22,
       username: 'root',
       privateKeyMode: PrivateKeyMode.global,
-      authOrderMode: AuthOrderMode.global,
-      authOrder: defaultAuthOrder,
     ),
   ];
 
@@ -94,8 +89,6 @@ class FileHostProfileRepository implements HostProfileRepository {
           port: (json['port'] as num?)?.toInt() ?? 22,
           username: (json['username'] ?? '').toString(),
           privateKeyMode: _parsePrivateKeyMode(json['privateKeyMode']),
-          authOrderMode: _parseAuthOrderMode(json['authOrderMode']),
-          authOrder: _parseAuthOrder(json['authOrder']),
         );
         if (profile.id.isEmpty ||
             profile.name.isEmpty ||
@@ -126,8 +119,6 @@ class FileHostProfileRepository implements HostProfileRepository {
             'port': host.port,
             'username': host.username,
             'privateKeyMode': host.privateKeyMode.name,
-            'authOrderMode': host.authOrderMode.name,
-            'authOrder': host.authOrder.map((item) => item.name).toList(),
           },
         )
         .toList(growable: false);
@@ -154,34 +145,5 @@ class FileHostProfileRepository implements HostProfileRepository {
       }
     }
     return PrivateKeyMode.global;
-  }
-
-  AuthOrderMode _parseAuthOrderMode(Object? value) {
-    if (value is String) {
-      for (final mode in AuthOrderMode.values) {
-        if (mode.name == value) {
-          return mode;
-        }
-      }
-    }
-    return AuthOrderMode.global;
-  }
-
-  List<AuthMethod> _parseAuthOrder(Object? value) {
-    if (value is List) {
-      final parsed = <AuthMethod>[];
-      for (final item in value) {
-        final name = item.toString();
-        for (final method in AuthMethod.values) {
-          if (method.name == name && !parsed.contains(method)) {
-            parsed.add(method);
-          }
-        }
-      }
-      if (parsed.isNotEmpty) {
-        return parsed;
-      }
-    }
-    return defaultAuthOrder;
   }
 }

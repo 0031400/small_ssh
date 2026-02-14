@@ -4,7 +4,6 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:dartssh2/dartssh2.dart';
-import 'package:small_ssh/domain/models/auth_method.dart';
 import 'package:small_ssh/domain/models/sftp_entry.dart';
 import 'package:small_ssh/infrastructure/ssh/ssh_gateway.dart';
 
@@ -17,27 +16,16 @@ class DartSsh2Gateway implements SshGateway {
 
     List<SSHKeyPair>? identities;
     final privateKey = _normalizePem(request.privateKey);
-    if (request.authMethod == AuthMethod.privateKey &&
-        privateKey != null &&
-        privateKey.isNotEmpty) {
-      identities = SSHKeyPair.fromPem(
-        privateKey,
-        request.privateKeyPassphrase,
-      );
+    if (privateKey != null && privateKey.isNotEmpty) {
+      identities = SSHKeyPair.fromPem(privateKey, request.privateKeyPassphrase);
     }
 
-    final password = request.password;
-    final passwordProvider = request.authMethod == AuthMethod.password
-        ? () {
-            final value = password;
-            return (value == null || value.trim().isEmpty) ? null : value;
-          }
-        : null;
+    String? passwordProvider() {
+      final value = request.password;
+      return (value == null || value.trim().isEmpty) ? null : value;
+    }
 
-    final interactivePassword = request.authMethod ==
-            AuthMethod.keyboardInteractive
-        ? request.keyboardInteractivePassword
-        : null;
+    final interactivePassword = request.keyboardInteractivePassword;
 
     final client = SSHClient(
       socket,
@@ -226,44 +214,46 @@ class _DartSsh2Connection implements SshConnection {
     late final StreamSubscription<Uint8List> sub;
     final done = Completer<void>();
     final cancelSignal = Completer<void>();
-    sub = file.read(
-      onProgress: (read) {
-        if (shouldCancel != null && shouldCancel()) {
-          cancelled = true;
-          if (!cancelSignaled) {
-            cancelSignaled = true;
-            cancelSignal.complete();
-          }
-          return;
-        }
-        if (total > 0 && onProgress != null) {
-          onProgress(read, total);
-        }
-      },
-    ).listen(
-      (chunk) {
-        if (cancelled || (shouldCancel != null && shouldCancel())) {
-          cancelled = true;
-          if (!cancelSignaled) {
-            cancelSignaled = true;
-            cancelSignal.complete();
-          }
-          return;
-        }
-        sink.add(chunk);
-      },
-      onError: (error, stack) {
-        if (!done.isCompleted) {
-          done.completeError(error, stack);
-        }
-      },
-      onDone: () {
-        if (!done.isCompleted) {
-          done.complete();
-        }
-      },
-      cancelOnError: true,
-    );
+    sub = file
+        .read(
+          onProgress: (read) {
+            if (shouldCancel != null && shouldCancel()) {
+              cancelled = true;
+              if (!cancelSignaled) {
+                cancelSignaled = true;
+                cancelSignal.complete();
+              }
+              return;
+            }
+            if (total > 0 && onProgress != null) {
+              onProgress(read, total);
+            }
+          },
+        )
+        .listen(
+          (chunk) {
+            if (cancelled || (shouldCancel != null && shouldCancel())) {
+              cancelled = true;
+              if (!cancelSignaled) {
+                cancelSignaled = true;
+                cancelSignal.complete();
+              }
+              return;
+            }
+            sink.add(chunk);
+          },
+          onError: (error, stack) {
+            if (!done.isCompleted) {
+              done.completeError(error, stack);
+            }
+          },
+          onDone: () {
+            if (!done.isCompleted) {
+              done.complete();
+            }
+          },
+          cancelOnError: true,
+        );
     try {
       await Future.any([done.future, cancelSignal.future]);
     } finally {
@@ -274,16 +264,14 @@ class _DartSsh2Connection implements SshConnection {
       }
     }
     if (cancelled) {
-      done.future
-          .catchError((_) {})
-          .whenComplete(() async {
-            await sub.cancel();
-            await sink.close();
-            await file.close();
-            if (await localFile.exists()) {
-              await localFile.delete();
-            }
-          });
+      done.future.catchError((_) {}).whenComplete(() async {
+        await sub.cancel();
+        await sink.close();
+        await file.close();
+        if (await localFile.exists()) {
+          await localFile.delete();
+        }
+      });
       throw StateError('Transfer cancelled');
     }
     if (total == 0 && onProgress != null) {
@@ -306,7 +294,8 @@ class _DartSsh2Connection implements SshConnection {
     final sftp = await _openSftp();
     final file = await sftp.open(
       remotePath,
-      mode: SftpFileOpenMode.write |
+      mode:
+          SftpFileOpenMode.write |
           SftpFileOpenMode.create |
           SftpFileOpenMode.truncate,
     );

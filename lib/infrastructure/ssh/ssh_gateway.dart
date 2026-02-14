@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:small_ssh/domain/models/auth_method.dart';
 import 'package:small_ssh/domain/models/sftp_entry.dart';
 
 class SshConnectRequest {
@@ -11,7 +10,6 @@ class SshConnectRequest {
     this.password,
     this.privateKey,
     this.privateKeyPassphrase,
-    this.authMethod = AuthMethod.password,
     this.keyboardInteractivePassword,
   });
 
@@ -21,7 +19,6 @@ class SshConnectRequest {
   final String? password;
   final String? privateKey;
   final String? privateKeyPassphrase;
-  final AuthMethod authMethod;
   final String? keyboardInteractivePassword;
 }
 

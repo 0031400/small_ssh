@@ -4,12 +4,8 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:small_ssh/domain/models/auth_method.dart';
 
-enum ClipboardBehavior {
-  contextMenu,
-  direct,
-}
+enum ClipboardBehavior { contextMenu, direct }
 
 class AppSettings extends ChangeNotifier {
   static const _fileName = 'small_ssh_settings.json';
@@ -17,14 +13,12 @@ class AppSettings extends ChangeNotifier {
   ThemeMode _themeMode = ThemeMode.system;
   double _terminalFontSize = 13;
   ClipboardBehavior _clipboardBehavior = ClipboardBehavior.contextMenu;
-  List<AuthMethod> _authOrder = List<AuthMethod>.of(defaultAuthOrder);
   bool _autoOpenSftpPanel = true;
   bool _loading = false;
 
   ThemeMode get themeMode => _themeMode;
   double get terminalFontSize => _terminalFontSize;
   ClipboardBehavior get clipboardBehavior => _clipboardBehavior;
-  List<AuthMethod> get authOrder => List<AuthMethod>.unmodifiable(_authOrder);
   bool get autoOpenSftpPanel => _autoOpenSftpPanel;
 
   Future<void> load() async {
@@ -47,8 +41,7 @@ class AppSettings extends ChangeNotifier {
           _parseDouble(data['terminalFontSize']) ?? _terminalFontSize;
       _clipboardBehavior =
           _parseClipboardBehavior(data['clipboardBehavior']) ??
-              _clipboardBehavior;
-      _authOrder = _parseAuthOrder(data['authOrder']) ?? _authOrder;
+          _clipboardBehavior;
       _autoOpenSftpPanel =
           _parseBool(data['autoOpenSftpPanel']) ?? _autoOpenSftpPanel;
       notifyListeners();
@@ -87,15 +80,6 @@ class AppSettings extends ChangeNotifier {
     _save();
   }
 
-  void setAuthOrder(List<AuthMethod> order) {
-    if (_listEquals(_authOrder, order)) {
-      return;
-    }
-    _authOrder = List<AuthMethod>.of(order);
-    notifyListeners();
-    _save();
-  }
-
   void setAutoOpenSftpPanel(bool value) {
     if (_autoOpenSftpPanel == value) {
       return;
@@ -115,7 +99,6 @@ class AppSettings extends ChangeNotifier {
         'themeMode': _themeMode.name,
         'terminalFontSize': _terminalFontSize,
         'clipboardBehavior': _clipboardBehavior.name,
-        'authOrder': _authOrder.map((item) => item.name).toList(),
         'autoOpenSftpPanel': _autoOpenSftpPanel,
       };
       await file.writeAsString(jsonEncode(data));
@@ -152,36 +135,6 @@ class AppSettings extends ChangeNotifier {
       }
     }
     return null;
-  }
-
-  List<AuthMethod>? _parseAuthOrder(Object? value) {
-    if (value is List) {
-      final parsed = <AuthMethod>[];
-      for (final item in value) {
-        final name = item.toString();
-        for (final method in AuthMethod.values) {
-          if (method.name == name && !parsed.contains(method)) {
-            parsed.add(method);
-          }
-        }
-      }
-      if (parsed.isNotEmpty) {
-        return parsed;
-      }
-    }
-    return null;
-  }
-
-  bool _listEquals(List<AuthMethod> a, List<AuthMethod> b) {
-    if (a.length != b.length) {
-      return false;
-    }
-    for (var i = 0; i < a.length; i += 1) {
-      if (a[i] != b[i]) {
-        return false;
-      }
-    }
-    return true;
   }
 
   double? _parseDouble(Object? value) {

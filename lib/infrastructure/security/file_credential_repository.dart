@@ -17,10 +17,7 @@ class FileCredentialRepository implements CredentialRepository {
   }
 
   @override
-  Future<void> writeSecret(
-    CredentialRef credentialRef,
-    String secret,
-  ) async {
+  Future<void> writeSecret(CredentialRef credentialRef, String secret) async {
     await _ensureLoaded();
     final trimmed = secret.trim();
     if (trimmed.isEmpty) {
