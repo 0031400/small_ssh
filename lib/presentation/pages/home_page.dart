@@ -435,15 +435,30 @@ class _HomePageState extends State<HomePage> {
                     SizedBox(
                       width: widths.terminal,
                       child: Card(
-                        child: TerminalPanel(
-                          sessions: widget.orchestrator.sessions,
-                          activeSessionId: widget.orchestrator.activeSessionId,
-                          onSelectSession: widget.orchestrator.setActiveSession,
-                          onDeleteSession: widget.orchestrator.removeSession,
-                          onSendInput: widget.orchestrator.sendInput,
-                          onResizeTerminal: widget.orchestrator.resizeTerminal,
-                          settings: widget.settings,
-                        ),
+                        child: widget.orchestrator.sessions.isEmpty
+                            ? _EmptySessionPanel(
+                                hasHosts: widget.orchestrator.hosts.isNotEmpty,
+                                onAddHost: _openHostDialog,
+                                onConnectFirstHost:
+                                    widget.orchestrator.hosts.isEmpty
+                                    ? null
+                                    : () => _connectToHost(
+                                        widget.orchestrator.hosts.first,
+                                      ),
+                              )
+                            : TerminalPanel(
+                                sessions: widget.orchestrator.sessions,
+                                activeSessionId:
+                                    widget.orchestrator.activeSessionId,
+                                onSelectSession:
+                                    widget.orchestrator.setActiveSession,
+                                onDeleteSession:
+                                    widget.orchestrator.removeSession,
+                                onSendInput: widget.orchestrator.sendInput,
+                                onResizeTerminal:
+                                    widget.orchestrator.resizeTerminal,
+                                settings: widget.settings,
+                              ),
                       ),
                     ),
                     if (showSftpPanel) ...[
@@ -581,6 +596,59 @@ class _HostListPanel extends StatelessWidget {
                 );
               },
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptySessionPanel extends StatelessWidget {
+  const _EmptySessionPanel({
+    required this.hasHosts,
+    required this.onAddHost,
+    this.onConnectFirstHost,
+  });
+
+  final bool hasHosts;
+  final Future<void> Function() onAddHost;
+  final Future<void> Function()? onConnectFirstHost;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.terminal,
+            size: 28,
+            color: Theme.of(context).colorScheme.outline,
+          ),
+          const SizedBox(height: 8),
+          Text('No Active Session', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 4),
+          const Text('Select a host on the left and connect.'),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton.filledTonal(
+                tooltip: 'Add Host',
+                onPressed: () => onAddHost(),
+                icon: const Icon(Icons.add),
+              ),
+              if (hasHosts) ...[
+                const SizedBox(width: 8),
+                IconButton.filled(
+                  tooltip: 'Connect First Host',
+                  onPressed: onConnectFirstHost == null
+                      ? null
+                      : () => onConnectFirstHost!(),
+                  icon: const Icon(Icons.link),
+                ),
+              ],
+            ],
           ),
         ],
       ),
