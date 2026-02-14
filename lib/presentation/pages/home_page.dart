@@ -228,11 +228,11 @@ class _HomePageState extends State<HomePage> {
             ],
           ),
           body: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(8),
             child: Row(
               children: [
                 SizedBox(
-                  width: 320,
+                  width: 280,
                   child: Card(
                     child: _HostListPanel(
                       loading: widget.orchestrator.loadingHosts,
@@ -244,7 +244,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Row(
                     children: [
@@ -262,9 +262,9 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                       if (showSftpPanel) ...[
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 8),
                         SizedBox(
-                          width: 280,
+                          width: 250,
                           child: Card(
                             child: SftpPanel(
                               orchestrator: widget.orchestrator,
@@ -324,30 +324,33 @@ class _HostListPanel extends StatelessWidget {
     }
 
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Hosts', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 8),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: onAddHost,
-              icon: const Icon(Icons.add),
-              label: const Text('Add Host'),
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: Text('Hosts', style: Theme.of(context).textTheme.titleMedium),
+              ),
+              IconButton(
+                tooltip: 'Add Host',
+                visualDensity: VisualDensity.compact,
+                onPressed: onAddHost,
+                icon: const Icon(Icons.add_circle_outline),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 6),
           Expanded(
             child: ListView.separated(
               itemCount: hosts.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 8),
+              separatorBuilder: (context, index) => const SizedBox(height: 6),
               itemBuilder: (context, index) {
                 final host = hosts[index];
                 return Card(
                   child: Padding(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(8),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -355,27 +358,30 @@ class _HostListPanel extends StatelessWidget {
                           host.name,
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${host.username}@${host.host}:${host.port}',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
                         const SizedBox(height: 4),
-                        Text('${host.username}@${host.host}:${host.port}'),
-                        const SizedBox(height: 8),
                         Row(
                           children: [
-                            Expanded(
-                              child: FilledButton(
-                                onPressed: () => onConnect(host),
-                                child: const Text('Connect'),
-                              ),
+                            IconButton(
+                              tooltip: 'Connect',
+                              visualDensity: VisualDensity.compact,
+                              onPressed: () => onConnect(host),
+                              icon: const Icon(Icons.link_outlined),
                             ),
-                            const SizedBox(width: 8),
                             IconButton(
                               onPressed: () => onEditHost(host),
                               tooltip: 'Edit host',
+                              visualDensity: VisualDensity.compact,
                               icon: const Icon(Icons.edit_outlined),
                             ),
-                            const SizedBox(width: 4),
                             IconButton(
                               onPressed: () => onDeleteHost(host),
                               tooltip: 'Delete host',
+                              visualDensity: VisualDensity.compact,
                               icon: const Icon(Icons.delete_outline),
                             ),
                           ],
@@ -387,7 +393,7 @@ class _HostListPanel extends StatelessWidget {
               },
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           const Text(
             'Using dartssh2 backend. Host key trust flow will be added next.',
           ),

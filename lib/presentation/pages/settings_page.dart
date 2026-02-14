@@ -97,10 +97,10 @@ class _SettingsPageState extends State<SettingsPage> {
             title: const Text('设置'),
           ),
           body: ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(10),
             children: [
               Text('通用', style: textTheme.titleMedium),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Card(
                 child: ListTile(
                   leading: const Icon(Icons.palette_outlined),
@@ -129,19 +129,19 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
               Text('终端', style: textTheme.titleMedium),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Card(
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(10),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Row(
                         children: [
                           Icon(Icons.terminal_outlined),
-                          SizedBox(width: 12),
+                          SizedBox(width: 8),
                           Text('字体大小'),
                         ],
                       ),
@@ -169,6 +169,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   secondary: const Icon(Icons.folder_outlined),
                   title: const Text('SFTP 面板'),
                   subtitle: const Text('自动显示右侧 SFTP 面板'),
+                  dense: true,
                   value: widget.settings.autoOpenSftpPanel,
                   onChanged: widget.settings.setAutoOpenSftpPanel,
                 ),
@@ -207,19 +208,19 @@ class _SettingsPageState extends State<SettingsPage> {
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
               Text('认证顺序', style: textTheme.titleMedium),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Card(
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(10),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Row(
                         children: [
                           Icon(Icons.vpn_key_outlined),
-                          SizedBox(width: 12),
+                          SizedBox(width: 8),
                           Text('全局认证顺序'),
                         ],
                       ),
@@ -233,12 +234,12 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
               Text('全局私钥', style: textTheme.titleMedium),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Card(
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(10),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -262,7 +263,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         obscureText: true,
                         enabled: !_loadingKey && !_savingKey,
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 8),
                       Row(
                         children: [
                           FilledButton(
@@ -277,7 +278,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                 _loadingKey || _savingKey ? null : _clearGlobalKey,
                             child: const Text('Clear'),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 8),
                           if (!_loadingKey)
                             Text(
                               _globalKeyController.text.trim().isEmpty
@@ -291,9 +292,9 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
               Text('关于', style: textTheme.titleMedium),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               const Card(
                 child: ListTile(
                   leading: Icon(Icons.info_outline),

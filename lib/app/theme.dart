@@ -11,9 +11,16 @@ ThemeData buildAppTheme() {
   );
 
   final textTheme = base.textTheme.copyWith(
-    titleLarge: base.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
-    titleMedium:
-        base.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+    titleLarge: base.textTheme.titleLarge?.copyWith(
+      fontWeight: FontWeight.w600,
+      fontSize: 18,
+    ),
+    titleMedium: base.textTheme.titleMedium?.copyWith(
+      fontWeight: FontWeight.w600,
+      fontSize: 14,
+    ),
+    bodyMedium: base.textTheme.bodyMedium?.copyWith(fontSize: 13),
+    bodySmall: base.textTheme.bodySmall?.copyWith(fontSize: 12),
   );
 
   return base.copyWith(
@@ -25,14 +32,14 @@ ThemeData buildAppTheme() {
       scrolledUnderElevation: 0,
       backgroundColor: const Color(0xFFF8FAFC),
       surfaceTintColor: Colors.transparent,
-      titleTextStyle: textTheme.titleLarge?.copyWith(color: scheme.onSurface),
+      titleTextStyle: textTheme.titleMedium?.copyWith(color: scheme.onSurface),
     ),
     cardTheme: CardThemeData(
       margin: EdgeInsets.zero,
       elevation: 0,
       color: scheme.surface,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(10),
         side: BorderSide(color: scheme.outlineVariant),
       ),
     ),
@@ -44,36 +51,36 @@ ThemeData buildAppTheme() {
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: const Color(0xFFF1F5F9),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         borderSide: BorderSide(color: scheme.outlineVariant),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         borderSide: BorderSide(color: scheme.outlineVariant),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         borderSide: BorderSide(color: scheme.primary, width: 1.4),
       ),
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         side: BorderSide(color: scheme.outlineVariant),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     ),
@@ -84,7 +91,8 @@ ThemeData buildAppTheme() {
     ),
     listTileTheme: const ListTileThemeData(
       dense: true,
-      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+      visualDensity: VisualDensity.compact,
     ),
     dialogTheme: DialogThemeData(
       backgroundColor: scheme.surface,
@@ -114,9 +122,16 @@ ThemeData buildAppDarkTheme() {
     colorScheme: scheme,
   );
   final textTheme = base.textTheme.copyWith(
-    titleLarge: base.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
-    titleMedium:
-        base.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+    titleLarge: base.textTheme.titleLarge?.copyWith(
+      fontWeight: FontWeight.w600,
+      fontSize: 18,
+    ),
+    titleMedium: base.textTheme.titleMedium?.copyWith(
+      fontWeight: FontWeight.w600,
+      fontSize: 14,
+    ),
+    bodyMedium: base.textTheme.bodyMedium?.copyWith(fontSize: 13),
+    bodySmall: base.textTheme.bodySmall?.copyWith(fontSize: 12),
   );
 
   return base.copyWith(
@@ -128,14 +143,14 @@ ThemeData buildAppDarkTheme() {
       scrolledUnderElevation: 0,
       backgroundColor: const Color(0xFF0B1118),
       surfaceTintColor: Colors.transparent,
-      titleTextStyle: textTheme.titleLarge?.copyWith(color: scheme.onSurface),
+      titleTextStyle: textTheme.titleMedium?.copyWith(color: scheme.onSurface),
     ),
     cardTheme: CardThemeData(
       margin: EdgeInsets.zero,
       elevation: 0,
       color: scheme.surface,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(10),
         side: BorderSide(color: scheme.outlineVariant),
       ),
     ),
@@ -147,36 +162,36 @@ ThemeData buildAppDarkTheme() {
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: const Color(0xFF121821),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         borderSide: BorderSide(color: scheme.outlineVariant),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         borderSide: BorderSide(color: scheme.outlineVariant),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         borderSide: BorderSide(color: scheme.primary, width: 1.4),
       ),
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         side: BorderSide(color: scheme.outlineVariant),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     ),
@@ -187,7 +202,8 @@ ThemeData buildAppDarkTheme() {
     ),
     listTileTheme: const ListTileThemeData(
       dense: true,
-      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+      visualDensity: VisualDensity.compact,
     ),
     dialogTheme: DialogThemeData(
       backgroundColor: scheme.surface,

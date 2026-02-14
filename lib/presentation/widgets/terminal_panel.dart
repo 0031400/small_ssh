@@ -77,15 +77,15 @@ class _TerminalPanelState extends State<TerminalPanel> {
     final controller = _controllers[active.session.id]!;
 
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(8),
       child: Column(
         children: [
           SizedBox(
-            height: 40,
+            height: 34,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: widget.sessions.length,
-              separatorBuilder: (context, index) => const SizedBox(width: 8),
+              separatorBuilder: (context, index) => const SizedBox(width: 6),
               itemBuilder: (context, index) {
                 final session = widget.sessions[index];
                 final selected = session.session.id == active.session.id;
@@ -100,17 +100,17 @@ class _TerminalPanelState extends State<TerminalPanel> {
               },
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Expanded(
             child: Container(
               width: double.infinity,
               decoration: BoxDecoration(
                 color: const Color(0xFF0B1220),
-                borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: Theme.of(context).dividerColor),
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
                 child: TerminalView(
                   terminal,
                   hardwareKeyboardOnly: true,
@@ -143,7 +143,7 @@ class _TerminalPanelState extends State<TerminalPanel> {
                     searchHitBackgroundCurrent: Color(0xAAEAB308),
                     searchHitForeground: Color(0xFF111827),
                   ),
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(8),
                   autofocus: true,
                   onSecondaryTapUp: (details, _) {
                     _handleTerminalSecondaryTap(
@@ -156,7 +156,7 @@ class _TerminalPanelState extends State<TerminalPanel> {
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 6),
           Row(
             children: [
               Expanded(
@@ -165,9 +165,11 @@ class _TerminalPanelState extends State<TerminalPanel> {
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ),
-              OutlinedButton(
+              IconButton(
+                tooltip: 'Delete session',
+                visualDensity: VisualDensity.compact,
                 onPressed: () => widget.onDeleteSession(active.session.id),
-                child: const Text('Delete Session'),
+                icon: const Icon(Icons.delete_outline),
               ),
             ],
           ),
