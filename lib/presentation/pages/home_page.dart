@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:small_ssh/app/settings.dart';
 import 'package:small_ssh/application/services/session_orchestrator.dart';
+import 'package:small_ssh/domain/models/credential_ref.dart';
 import 'package:small_ssh/domain/models/host_profile.dart';
 import 'package:small_ssh/domain/repositories/credential_repository.dart';
 import 'package:small_ssh/presentation/widgets/host_form_dialog.dart';
@@ -95,9 +96,18 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _openEditHostDialog(HostProfile host) async {
+    final initialPassword = await widget.credentialRepository.readSecret(
+      CredentialRef(id: '${host.id}-password', kind: CredentialKind.password),
+    );
+    if (!mounted) {
+      return;
+    }
     final result = await showDialog<HostFormResult>(
       context: context,
-      builder: (context) => HostFormDialog(initialHost: host),
+      builder: (context) => HostFormDialog(
+        initialHost: host,
+        initialPassword: initialPassword,
+      ),
     );
 
     if (!mounted || result == null) {

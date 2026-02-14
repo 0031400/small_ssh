@@ -24,9 +24,14 @@ class HostFormResult {
 }
 
 class HostFormDialog extends StatefulWidget {
-  const HostFormDialog({super.key, this.initialHost});
+  const HostFormDialog({
+    super.key,
+    this.initialHost,
+    this.initialPassword,
+  });
 
   final HostProfile? initialHost;
+  final String? initialPassword;
 
   @override
   State<HostFormDialog> createState() => _HostFormDialogState();
@@ -53,7 +58,9 @@ class _HostFormDialogState extends State<HostFormDialog> {
     _hostController = TextEditingController(text: initial?.host ?? '');
     _portController = TextEditingController(text: '${initial?.port ?? 22}');
     _usernameController = TextEditingController(text: initial?.username ?? '');
-    _passwordController = TextEditingController();
+    _passwordController = TextEditingController(
+      text: widget.initialPassword ?? '',
+    );
     _privateKeyController = TextEditingController();
     _privateKeyPassphraseController = TextEditingController();
     _privateKeyMode = initial?.privateKeyMode ?? PrivateKeyMode.global;
@@ -143,9 +150,7 @@ class _HostFormDialogState extends State<HostFormDialog> {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _passwordController,
-                  decoration: const InputDecoration(
-                    labelText: 'Password (optional, leave blank to keep)',
-                  ),
+                  decoration: const InputDecoration(labelText: 'Password'),
                   obscureText: true,
                 ),
               ];
