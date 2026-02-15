@@ -256,13 +256,13 @@ class _TerminalPanelState extends State<TerminalPanel> {
 
     if (widget.settings.clipboardBehavior == ClipboardBehavior.direct) {
       if (hasSelection) {
+        controller.clearSelection();
         await Clipboard.setData(ClipboardData(text: selectedText));
       } else {
         final data = await Clipboard.getData(Clipboard.kTextPlain);
         final text = data?.text;
         if (text != null && text.isNotEmpty) {
           terminal.paste(text);
-          controller.clearSelection();
         }
       }
       return;
@@ -292,6 +292,7 @@ class _TerminalPanelState extends State<TerminalPanel> {
     );
 
     if (action == _TerminalMenuAction.copy && hasSelection) {
+      controller.clearSelection();
       await Clipboard.setData(ClipboardData(text: selectedText));
       return;
     }
@@ -301,7 +302,6 @@ class _TerminalPanelState extends State<TerminalPanel> {
       final text = data?.text;
       if (text != null && text.isNotEmpty) {
         terminal.paste(text);
-        controller.clearSelection();
       }
     }
   }
